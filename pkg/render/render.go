@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/justinas/nosurf"
 	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/config"
 	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/models"
 )
@@ -20,14 +21,21 @@ func NewTemplates(a *config.AppConfig) {
 	app = a
 }
 
+// AddDefaultData adds data for all templates
+func AddDefaultData(td *models.TemplateData, r *http.Request) *models.TemplateData {
+	td.CSRFToken = nosurf.Token(r)
+	return td
+}
+
 // RenderTemplate renders a template.
-func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+func RenderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) {
 	var tc map[string]*template.Template
 	if app.UseCache {
 		tc = app.TemplateCache
 	} else {
 		tc = CreateTemplateCache(mainTmplDir)
 	}
+	td = AddDefaultData(td, r)
 	err := tc[tmpl].Execute(w, td)
 	if err != nil {
 		fmt.Println("error executing tmpl", err)

@@ -1,0 +1,86 @@
+{{template "base" .}}
+
+{{define "title"}}
+    Mobile Poker Page
+{{end}}
+
+
+{{define "content"}}
+    <div id="table" padding=10></div>
+    <div class="bettingbutton form-inline">
+        <button type="button" class="btn btn-primary" onclick="check()">Check</button>
+        <form action="/mobilepoker" method="post" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <label class="control-label" for="Bet">Bet Size: 
+                <input type="text" class="form-control" id="betSize" name="Bet">
+                <input type="submit" class="btn btn-primary" value="Bet">
+            </label>
+        </form>
+        <button type="button" class="btn btn-primary" onclick="call()">Call</button>
+        <button type="button" class="btn btn-primary" onclick="fold()">Fold</button>
+    </div>
+    
+    <div id="stack">
+        <p>Your Stack Size: {{.IntMap.stack}}</p>
+    </div>
+    <div>
+        <form action="/initmobilepoker" method="post" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <select class="form-control" name="PlayerId">
+                <option value="Player1">Player1</option>
+                <option value="Player2">Player2</option>
+                <option value="Player3">Player3</option>
+                <option value="Player4">Player4</option>
+                <option value="Player5">Player5</option>
+                <option value="Player6">Player6</option>
+                <option value="Player7">Player7</option>
+                <option value="Player8">Player8</option>
+                <option value="Player9">Player9</option>
+            </select>
+            <input type="submit" class="btn btn-primary" value="Init">
+        </form>
+    </div>
+{{end}}
+
+
+{{define "js"}}
+    <script>
+        class Card {
+            constructor(num, suit, id){
+                this.num = num;
+                this.suit = suit;
+                this.id = id;
+            }
+        }
+        let communityCards = new Array();
+        serveCards();
+        function serveCards(){
+            let N = 2;
+            let text = "";
+            //fill from 0 to 51
+            let num_arr = Array.from(Array(52).keys());
+            for(let i = 0, len = num_arr.length; i < N; i++, len--) {
+                let rndNum = Math.floor(Math.random()*len);
+                let num = num_arr[rndNum]
+                num_arr[rndNum] = num_arr[len-1];
+                //ランダムに得られた数字をカード番号、記号に変換
+                let [cardNum, cardSuit] = numSuit(num); 
+                //number + suit でIDを設定
+                imgID = String(cardNum) + cardSuit;
+                //communinty cardsの決定、保存
+                communityCards.push(new Card(cardNum, cardSuit, imgID));
+                //imgタグのid属性を、”number+suit”の文字列として、裏面を表示する
+                text += '<img src="/static/cardsIMG/' + communityCards[i].num + "_of_" + communityCards[i].suit + '.png" id=' + communityCards[i].id + ' width=200>';
+            }
+            document.getElementById("table").innerHTML = text;
+        }
+
+        //数字と記号を決定する関数
+        function numSuit(num){
+            const suits_arr = ["clubs","diamonds","hearts","spades"];
+            let card_num = num%13 + 1;
+            let card_suit = suits_arr[Math.floor(num/13)];
+            return [card_num, card_suit];
+        }
+    </script>
+{{end}}

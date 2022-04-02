@@ -16,6 +16,12 @@ func routes(app *config.AppConfig) http.Handler {
 	mux.Get("/", handlers.Repo.Home)
 	mux.Get("/about", handlers.Repo.About)
 	mux.Get("/poker", handlers.Repo.Poker)
+	mux.Get("/getpotdata", handlers.Repo.BetsizeAjax)
+
+	mux.Post("/initmobilepoker", handlers.Repo.InitMobilePoker)
+	mux.Get("/mobilepoker", handlers.Repo.MobilePoker)
+	mux.Post("/mobilepoker", handlers.Repo.MobilePokerBetPost)
+
 	mux.Get("/contact", handlers.Repo.Contact)
 
 	fileServer := http.FileServer(http.Dir("./static/"))

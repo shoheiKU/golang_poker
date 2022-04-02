@@ -1,6 +1,6 @@
 {{define "base"}}
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -9,16 +9,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
               integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l"
               crossorigin="anonymous">
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style type="text/css">
-        div {
-        width: 100%;
-        display: inline-block;
+        div .bettingbutton{
+            width: 100%;
         }
 
         div img {
-        float: left;
-        margin:15px;
+            margin:15px;
         }
     </style>
 
@@ -51,6 +50,9 @@
                         <a class="nav-link" href="/poker">Poker</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/mobilepoker">Mobile Poker</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/contact">Contact</a>
                     </li>
 
@@ -64,6 +66,28 @@
     {{block "js" .}}
 
     {{end}}
+    <script>
+        function popup(type, title, text){
+            Swal.fire({
+                icon: type,
+                title: title,
+                text: text,
+            })
+        }
+        {{with .Flash}}
+            popup("success", "Success", "{{.}}")
+        {{end}}
+        {{with .Warning}}
+            popup("warning", "Warning", "{{.}}")
+        {{end}}
+        {{with .Error}}
+            popup("error", "Error", "{{.}}")
+        {{end}}
+        {{with .Info}}
+            popup("info", "Info", "{{.}}")
+        {{end}}
+
+    </script>
 </body>
 
 </html>
