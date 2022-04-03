@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/config"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/handlers"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/models"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/render"
+	"github.com/shoheiKU/golang_poker/pkg/config"
+	"github.com/shoheiKU/golang_poker/pkg/handlers"
+	"github.com/shoheiKU/golang_poker/pkg/models"
+	"github.com/shoheiKU/golang_poker/pkg/render"
 )
 
 const ipAddr = "127.0.0.1"

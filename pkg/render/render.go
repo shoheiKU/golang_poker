@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/justinas/nosurf"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/config"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/models"
+	"github.com/shoheiKU/golang_poker/pkg/config"
+	"github.com/shoheiKU/golang_poker/pkg/models"
 )
 
 const mainTmplDir = "./templates/"

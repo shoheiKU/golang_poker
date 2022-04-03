@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/config"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/handlers"
+	"github.com/shoheiKU/golang_poker/pkg/config"
+	"github.com/shoheiKU/golang_poker/pkg/handlers"
 )
 
 func routes(app *config.AppConfig) http.Handler {

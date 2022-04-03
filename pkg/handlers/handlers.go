@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/config"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/models"
-	"github.com/shoheiKU/web_application/GO_UDEMY/pkg/render"
+	"github.com/shoheiKU/golang_poker/pkg/config"
+	"github.com/shoheiKU/golang_poker/pkg/models"
+	"github.com/shoheiKU/golang_poker/pkg/render"
 )
 
 // Repo the repository used by the handlers
