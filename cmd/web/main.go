@@ -21,12 +21,13 @@ var session *scs.SessionManager
 
 func main() {
 	pokerRepo := handlers.NewPokerRepo(
-		map[models.PlayerId]chan int{},
+		map[models.PlayerSeat]chan int{},
 		[models.MaxPlayer]*models.PlayerData{},
 		new(int),
 		new(int),
-		new(models.PlayerId),
-		new(models.PlayerId),
+		new(int),
+		new(models.PlayerSeat),
+		new(models.PlayerSeat),
 	)
 	// set up AppConfig & load templates
 	// set true when in production

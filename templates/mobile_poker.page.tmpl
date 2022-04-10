@@ -7,26 +7,37 @@
 
 {{define "content"}}
     <div id="table" padding=10></div>
-    <div class="bettingbutton form-inline">
-        <button type="button" class="btn btn-primary" onclick="check()">Check</button>
-        <form action="/mobilepoker" method="post" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <label class="control-label" for="Bet">Bet Size: 
-                <input type="text" class="form-control" id="betSize" name="Bet">
-                <input type="submit" class="btn btn-primary" value="Bet">
-            </label>
+    <div class="bettingbutton">
+        <form action="/mobilepoker" method="post">
+            <div class="form-inline">
+                <button type="button" class="btn btn-primary" onclick="check()">Check</button>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <label class="control-label">Bet Size: 
+                    <input type="text" class="form-control" name="Bet">
+                    <input type="submit" class="btn btn-primary" value="Bet">
+                </label>
+                <button type="button" class="btn btn-primary" onclick="call()">Call</button>
+                <button type="button" class="btn btn-primary" onclick="fold()">Fold</button>
+            </div>
         </form>
-        <button type="button" class="btn btn-primary" onclick="call()">Call</button>
-        <button type="button" class="btn btn-primary" onclick="fold()">Fold</button>
     </div>
     
     <div id="stack">
         <p>Your Stack Size: {{.IntMap.stack}}</p>
     </div>
     <div>
+        <p>Raiser:</p>
+        <p id="originalRaiser"></p>
+        <p>Bet Size:</p>
+        <p id="betSize"></p>
+    </div>
+    <div id="stack">
+        <p>Your Stack Size: {{.IntMap.stack}}</p>
+    </div>
+    <div>
         <form action="/initmobilepoker" method="post" style="display: inline;">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <select class="form-control" name="PlayerId">
+            <select class="form-control" name="PlayerSeat">
                 <option value="Player1">Player1</option>
                 <option value="Player2">Player2</option>
                 <option value="Player3">Player3</option>
@@ -81,6 +92,26 @@
             let card_num = num%13 + 1;
             let card_suit = suits_arr[Math.floor(num/13)];
             return [card_num, card_suit];
+        }
+    </script>
+    <script>
+        console.log("Waiting Ajax")
+        waitingturn();
+        function waitingturn(){
+            $.ajax({
+            url: '/waitingturn',
+            dataType: 'json',
+            success: function(data) {
+                $('#betSize').text(data["BetSize"]);
+                $('#originalRaiser').text(data["OriginalRaiser"]);
+                popup("info", "Your Turn", data["OriginalRaiser"] + " bet " + data["BetSize"] + " dollars")
+                waitingturn()
+            },
+            error: function(data) {
+                alert('error');
+                waitingturn()
+            }
+            });
         }
     </script>
 {{end}}

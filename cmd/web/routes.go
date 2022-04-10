@@ -21,6 +21,7 @@ func routes(app *config.AppConfig) http.Handler {
 	mux.Post("/initmobilepoker", handlers.Repo.InitMobilePoker)
 	mux.Get("/mobilepoker", handlers.Repo.MobilePoker)
 	mux.Post("/mobilepoker", handlers.Repo.MobilePokerBetPost)
+	mux.Get("/waitingturn", handlers.Repo.WaitingTurnAjax)
 
 	mux.Get("/contact", handlers.Repo.Contact)
 

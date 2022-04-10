@@ -24,7 +24,6 @@
 
 
 {{define "js"}}
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         class Card {
             constructor(num, suit, id){
@@ -92,7 +91,6 @@
                 url: '/getpotdata',
                 dataType: 'json',
                 success: function(data) {
-                    console.log(data)
                     $('#betsize').text(data["betsize"]);
                     $('#potsize').text(data["potsize"]);
                 },

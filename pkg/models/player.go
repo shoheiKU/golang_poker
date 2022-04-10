@@ -8,16 +8,17 @@ var ()
 
 // PlayerData is a data structure for each user
 type PlayerData struct {
-	PlayerId PlayerId
-	Stack    int
-	Bet      int
+	PlayerSeat PlayerSeat
+	Stack      int
+	Bet        int
+	IsPlaying  bool
 }
 
-// PlayerId is the number of Player
-type PlayerId int
+// PlayerSeat is the number of Seat
+type PlayerSeat int
 
 const (
-	Player1 PlayerId = iota
+	Player1 PlayerSeat = iota
 	Player2
 	Player3
 	Player4
@@ -29,8 +30,8 @@ const (
 	MaxPlayer
 )
 
-// ItoPlayerId converts int to type PlayerId.
-func ItoPlayerId(i int) PlayerId {
+// ItoPlayerSeat converts int to type PlayerSeat.
+func ItoPlayerSeat(i int) PlayerSeat {
 	switch i {
 	case 0:
 		return Player1
@@ -56,8 +57,8 @@ func ItoPlayerId(i int) PlayerId {
 	}
 }
 
-// ItoPlayerId converts string to type PlayerId.
-func AtoPlayerId(s string) PlayerId {
+// AtoPlayerSeat converts string to type PlayerSeat.
+func AtoPlayerSeat(s string) PlayerSeat {
 	switch s {
 	case "Player1":
 		return Player1
@@ -83,8 +84,8 @@ func AtoPlayerId(s string) PlayerId {
 	}
 }
 
-// Tostring returns string according to PlayerId.
-func (p PlayerId) ToString() string {
+// Tostring returns string according to PlayerSeat.
+func (p PlayerSeat) ToString() string {
 	switch p {
 	case Player1:
 		return "player1"
@@ -110,17 +111,17 @@ func (p PlayerId) ToString() string {
 	}
 }
 
-// NowPlayer returns PlayerId. I will change this later.
-func (r PlayerId) NowPlayer() PlayerId {
+// NowPlayer returns PlayerSeat. I will change this later.
+func (r PlayerSeat) NowPlayer() PlayerSeat {
 	return r
 }
 
-// MaxPlayer returns MaxPlayerId.
-func (r PlayerId) MaxPlayer() PlayerId {
+// MaxPlayer returns MaxPlayerSeat.
+func (r PlayerSeat) MaxPlayer() PlayerSeat {
 	return MaxPlayer
 }
 
-// NextPlayer returns next PlayerId.
-func (r PlayerId) NextPlayer() PlayerId {
-	return PlayerId(int(r)+1) % r.MaxPlayer()
+// NextSeat returns next PlayerSeat.
+func (r PlayerSeat) NextSeat() PlayerSeat {
+	return PlayerSeat(int(r)+1) % r.MaxPlayer()
 }
