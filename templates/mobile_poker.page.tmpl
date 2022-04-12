@@ -8,16 +8,17 @@
 {{define "content"}}
     <div id="table" padding=10></div>
     <div class="bettingbutton">
-        <form action="/mobilepoker" method="post">
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="form-inline">
-                <button type="button" class="btn btn-primary" onclick="check()">Check</button>
-                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary" name="action" value="check">Check</button>
                 <label class="control-label">Bet Size: 
                     <input type="text" class="form-control" name="Bet">
-                    <input type="submit" class="btn btn-primary" value="Bet">
+                    <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary" name="action" value="bet">Bet</button>
                 </label>
-                <button type="button" class="btn btn-primary" onclick="call()">Call</button>
-                <button type="button" class="btn btn-primary" onclick="fold()">Fold</button>
+                <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary" name="action" value="call">Call</button>
+                <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary" name="action" value="fold">Fold</button>
+                <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary" name="action" value="all-in">All in</button>
             </div>
         </form>
     </div>
@@ -31,11 +32,8 @@
         <p>Bet Size:</p>
         <p id="betSize"></p>
     </div>
-    <div id="stack">
-        <p>Your Stack Size: {{.IntMap.stack}}</p>
-    </div>
     <div>
-        <form action="/initmobilepoker" method="post" style="display: inline;">
+        <form action="/mobilepoker/init" method="post" style="display: inline;">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <select class="form-control" name="PlayerSeat">
                 <option value="Player1">Player1</option>
@@ -99,7 +97,7 @@
         waitingturn();
         function waitingturn(){
             $.ajax({
-            url: '/waitingturn',
+            url: '/mobilepoker/waitingturn',
             dataType: 'json',
             success: function(data) {
                 $('#betSize').text(data["BetSize"]);

@@ -1,17 +1,18 @@
 package models
 
 import (
+	"errors"
 	"log"
 )
 
 var ()
 
-// PlayerData is a data structure for each user
-type PlayerData struct {
-	PlayerSeat PlayerSeat
-	Stack      int
-	Bet        int
-	IsPlaying  bool
+// Player is a data structure for each player
+type Player struct {
+	playerSeat PlayerSeat
+	stack      int
+	bet        int
+	isPlaying  bool
 }
 
 // PlayerSeat is the number of Seat
@@ -29,6 +30,20 @@ const (
 	Player9
 	MaxPlayer
 )
+
+func NewPlayer(
+	playerSeat PlayerSeat,
+	stack int,
+	bet int,
+	isPlaying bool,
+) *Player {
+	return &Player{
+		playerSeat: playerSeat,
+		stack:      stack,
+		bet:        bet,
+		isPlaying:  isPlaying,
+	}
+}
 
 // ItoPlayerSeat converts int to type PlayerSeat.
 func ItoPlayerSeat(i int) PlayerSeat {
@@ -124,4 +139,50 @@ func (r PlayerSeat) MaxPlayer() PlayerSeat {
 // NextSeat returns next PlayerSeat.
 func (r PlayerSeat) NextSeat() PlayerSeat {
 	return PlayerSeat(int(r)+1) % r.MaxPlayer()
+}
+
+func (p *Player) SetBet(bet int) error {
+	if p.stack < bet {
+		return errors.New("bet over stack")
+	} else {
+		p.bet = bet
+		return nil
+	}
+}
+
+func (p *Player) AllIn() {
+	p.bet = p.stack
+}
+
+func (p *Player) Bet() int {
+	return p.bet
+}
+
+func (p *Player) Check() {
+	p.bet = 0
+}
+
+func (p *Player) Stack() int {
+	return p.stack
+}
+
+func (p *Player) Deal() int {
+	val := p.bet
+	p.stack -= p.bet
+	p.bet = 0
+	return val
+}
+
+func (p *Player) Fold() {
+	p.stack -= p.bet
+	p.bet = 0
+	p.isPlaying = false
+}
+
+func (p *Player) PlayerSeat() PlayerSeat {
+	return p.playerSeat
+}
+
+func (p *Player) IsPlaying() bool {
+	return p.isPlaying
 }

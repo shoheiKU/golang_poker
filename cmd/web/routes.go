@@ -18,10 +18,20 @@ func routes(app *config.AppConfig) http.Handler {
 	mux.Get("/poker", handlers.Repo.Poker)
 	mux.Get("/getpotdata", handlers.Repo.BetsizeAjax)
 
-	mux.Post("/initmobilepoker", handlers.Repo.InitMobilePoker)
-	mux.Get("/mobilepoker", handlers.Repo.MobilePoker)
-	mux.Post("/mobilepoker", handlers.Repo.MobilePokerBetPost)
-	mux.Get("/waitingturn", handlers.Repo.WaitingTurnAjax)
+	mux.Route("/mobilepoker", func(r chi.Router) {
+		r.Get("/", handlers.Repo.MobilePoker)
+		r.Post("/init", handlers.Repo.InitMobilePoker)
+		r.Get("/waitingturn", handlers.Repo.WaitingTurnAjax)
+		r.Route("/action", func(r chi.Router) {
+			r.Post("/check", handlers.Repo.MobilePokerCheckPost)
+
+			r.Post("/call", handlers.Repo.MobilePokerBetPost)
+			r.Post("/bet", handlers.Repo.MobilePokerBetPost)
+			r.Post("/all-in", handlers.Repo.MobilePokerBetPost)
+
+			r.Post("/fold", handlers.Repo.MobilePokerFoldPost)
+		})
+	})
 
 	mux.Get("/contact", handlers.Repo.Contact)
 

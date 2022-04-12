@@ -22,7 +22,7 @@ var session *scs.SessionManager
 func main() {
 	pokerRepo := handlers.NewPokerRepo(
 		map[models.PlayerSeat]chan int{},
-		[models.MaxPlayer]*models.PlayerData{},
+		[models.MaxPlayer]*models.Player{},
 		new(int),
 		new(int),
 		new(int),
