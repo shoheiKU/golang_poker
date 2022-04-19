@@ -8,7 +8,9 @@
 {{define "content"}}
     <div id="table" padding=10></div>
     <div id="buttons">
-        <button type="button" class="btn btn-primary" onclick="displayCards()">Change</button>
+        <a href="/poker/start" class="btn btn-primary">Start Game</a>
+        <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
+        <a href="/poker/next" class="btn btn-primary">Next Game</a>
         <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
         <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
         <button type="button" class="btn btn-primary" onclick="river()">River</button>
@@ -25,62 +27,61 @@
 
 {{define "js"}}
     <script>
-        class Card {
-            constructor(num, suit, id){
-                this.num = num;
-                this.suit = suit;
-                this.id = id;
-            }
-        }
-        let communityCards = new Array();
         displayCards();
+        waitingPhase();
         function displayCards(){
             let N = 5;
             let text = "";
             //fill from 0 to 51
-            let num_arr = Array.from(Array(52).keys());
-            for(let i = 0, len = num_arr.length; i < N; i++, len--) {
-                let rndNum = Math.floor(Math.random()*len);
-                let num = num_arr[rndNum]
-                num_arr[rndNum] = num_arr[len-1];
-                //ランダムに得られた数字をカード番号、記号に変換
-                let [cardNum, cardSuit] = numSuit(num); 
-                //number + suit でIDを設定
-                imgID = String(cardNum) + cardSuit;
-                //communinty cardsの決定、保存
-                communityCards.push(new Card(cardNum, cardSuit, imgID));
+            for(let i = 0; i < N; i++) {
                 //imgタグのid属性を、”number+suit”の文字列として、裏面を表示する
-                text += '<img src="/static/cardsIMG/backside.jpg" id=' + communityCards[i].id + ' width=200>';
+                text += '<img src="/static/cardsIMG/backside.jpg" id="Card' + i + '" width=200>';
             }
-            console.log(text);
             document.getElementById("table").innerHTML = text;
-        }
-        function frop(){
-            for(let i = 0; i < 3; i++){
+        };
+        function frop(cards){
+            $.each(cards, function(index, card){
                 //カードを裏の画像から表の画像に切り替える
-                document.getElementById(communityCards[i].id).src = "/static/cardsIMG/" + communityCards[i].num + "_of_" + communityCards[i].suit + ".png";
+                $("#Card"+index).attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
+            })
+        };
+        function turn(card){
+            //カードを裏の画像から表の画像に切り替える
+            $("#Card3").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
+        };
+        function river(card){
+            //カードを裏の画像から表の画像に切り替える
+            $("#Card4").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
+        };
+        function navResult(){
+            popup("info", "Result", '<a href="/poker/result">Result page</a>')
+        };
+        function waitingPhase() {
+            $.ajax({
+            url: '/poker/waitingphase',
+            dataType: 'json',
+            success: function(data) {
+                switch (data["Function"]){
+                    case "frop":
+                        frop(data["Cards"])
+                    case "turn":
+                        turn(data["Card"])
+                    case "river":
+                        river(data["Card"])
+                    case "result":
+                        navResult()
+                }
+                waitingPhase()
+            },
+            error: function(data) {
+                alert('error');
+                waitingPhase()
             }
-        }
-        function turn(){
-            for(let i = 3; i < 4; i++){
-                //カードを裏の画像から表の画像に切り替える
-                document.getElementById(communityCards[i].id).src = "/static/cardsIMG/" + communityCards[i].num + "_of_" + communityCards[i].suit + ".png";
-            }
-        }
-        function river(){
-            for(let i = 4; i < 5; i++){
-                //カードを裏の画像から表の画像に切り替える
-                document.getElementById(communityCards[i].id).src = "/static/cardsIMG/" + communityCards[i].num + "_of_" + communityCards[i].suit + ".png";
-            }
-        }
+            });
+        };
+        $(function() {
+        });
 
-        //数字と記号を決定する関数
-        function numSuit(num){
-            const suits_arr = ["clubs","diamonds","hearts","spades"];
-            let card_num = num%13 + 1;
-            let card_suit = suits_arr[Math.floor(num/13)];
-            return [card_num, card_suit];
-        }
     </script>
 
     <script>
@@ -100,6 +101,6 @@
                 });
             }
             );
-      });
+        });
     </script>
 {{end}}

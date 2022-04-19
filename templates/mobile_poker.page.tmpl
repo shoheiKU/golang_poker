@@ -6,92 +6,77 @@
 
 
 {{define "content"}}
-    <div id="table" padding=10></div>
-    <div class="bettingbutton">
-        <form method="post">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <div class="form-inline">
-                <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary" name="action" value="check">Check</button>
-                <label class="control-label">Bet Size: 
-                    <input type="text" class="form-control" name="Bet">
-                    <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary" name="action" value="bet">Bet</button>
-                </label>
-                <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary" name="action" value="call">Call</button>
-                <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary" name="action" value="fold">Fold</button>
-                <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary" name="action" value="all-in">All in</button>
+    {{with $td := .}}
+        <div id="table" padding=10>
+            {{with $td.Data.pocketCards}}
+                {{if eq .card1.Num 0}}
+                    <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
+                    <img src="/static/cardsIMG/backside.jpg" id="Card2" width=200>
+                {{else}}
+                    <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1" width=200>
+                    <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2" width=200>
+                {{end}}
+            {{end}}
+        </div>
+        <div class="bettingbutton">
+            {{if $td.Data.isPlaying}}
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{$td.CSRFToken}}">
+                <div class="form-inline">
+                    <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary" name="action" value="check">Check</button>
+                    <label class="control-label">Bet Size: 
+                        <input type="text" class="form-control" name="Bet">
+                        <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary" name="action" value="bet">Bet</button>
+                    </label>
+                    <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary" name="action" value="call">Call</button>
+                    <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary" name="action" value="fold">Fold</button>
+                    <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary" name="action" value="all-in">All in</button>
+                </div>
+            </form>
+            {{else}}
+                <p>Please wait for the next game!</p>
+            {{end}}
+        </div>
+        
+        <div id="stack">
+            <p>Your Stack Size: {{.Data.stack}}</p>
+        </div>
+        {{if $td.Data.isPlaying}}
+            <div>
+                <p>Raiser:</p>
+                <p id="originalRaiser"></p>
+                <p>Bet Size:</p>
+                <p id="betSize"></p>
             </div>
-        </form>
-    </div>
-    
-    <div id="stack">
-        <p>Your Stack Size: {{.IntMap.stack}}</p>
-    </div>
-    <div>
-        <p>Raiser:</p>
-        <p id="originalRaiser"></p>
-        <p>Bet Size:</p>
-        <p id="betSize"></p>
-    </div>
-    <div>
-        <form action="/mobilepoker/init" method="post" style="display: inline;">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <select class="form-control" name="PlayerSeat">
-                <option value="Player1">Player1</option>
-                <option value="Player2">Player2</option>
-                <option value="Player3">Player3</option>
-                <option value="Player4">Player4</option>
-                <option value="Player5">Player5</option>
-                <option value="Player6">Player6</option>
-                <option value="Player7">Player7</option>
-                <option value="Player8">Player8</option>
-                <option value="Player9">Player9</option>
-            </select>
-            <input type="submit" class="btn btn-primary" value="Init">
-        </form>
-    </div>
+        {{end}}
+        <div>
+            {{with $p := $td.Data.playerSeat}}
+                {{if eq $p "Preset Player"}}
+                    <form action="/mobilepoker/init" method="post" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{$td.CSRFToken}}">
+                        <select class="form-control" name="PlayerSeat">
+                            <option value="Player1">Player1</option>
+                            <option value="Player2">Player2</option>
+                            <option value="Player3">Player3</option>
+                            <option value="Player4">Player4</option>
+                            <option value="Player5">Player5</option>
+                            <option value="Player6">Player6</option>
+                            <option value="Player7">Player7</option>
+                            <option value="Player8">Player8</option>
+                            <option value="Player9">Player9</option>
+                        </select>
+                        <input type="submit" class="btn btn-primary" value="Init">
+                    </form>
+                {{else}}
+                    <p>Player Seat: {{$p}}</p>
+                {{end}}
+            {{end}}
+        </div>
+    {{end}}
 {{end}}
 
 
 {{define "js"}}
-    <script>
-        class Card {
-            constructor(num, suit, id){
-                this.num = num;
-                this.suit = suit;
-                this.id = id;
-            }
-        }
-        let communityCards = new Array();
-        serveCards();
-        function serveCards(){
-            let N = 2;
-            let text = "";
-            //fill from 0 to 51
-            let num_arr = Array.from(Array(52).keys());
-            for(let i = 0, len = num_arr.length; i < N; i++, len--) {
-                let rndNum = Math.floor(Math.random()*len);
-                let num = num_arr[rndNum]
-                num_arr[rndNum] = num_arr[len-1];
-                //ランダムに得られた数字をカード番号、記号に変換
-                let [cardNum, cardSuit] = numSuit(num); 
-                //number + suit でIDを設定
-                imgID = String(cardNum) + cardSuit;
-                //communinty cardsの決定、保存
-                communityCards.push(new Card(cardNum, cardSuit, imgID));
-                //imgタグのid属性を、”number+suit”の文字列として、裏面を表示する
-                text += '<img src="/static/cardsIMG/' + communityCards[i].num + "_of_" + communityCards[i].suit + '.png" id=' + communityCards[i].id + ' width=200>';
-            }
-            document.getElementById("table").innerHTML = text;
-        }
-
-        //数字と記号を決定する関数
-        function numSuit(num){
-            const suits_arr = ["clubs","diamonds","hearts","spades"];
-            let card_num = num%13 + 1;
-            let card_suit = suits_arr[Math.floor(num/13)];
-            return [card_num, card_suit];
-        }
-    </script>
     <script>
         console.log("Waiting Ajax")
         waitingturn();
@@ -100,9 +85,18 @@
             url: '/mobilepoker/waitingturn',
             dataType: 'json',
             success: function(data) {
-                $('#betSize').text(data["BetSize"]);
-                $('#originalRaiser').text(data["OriginalRaiser"]);
-                popup("info", "Your Turn", data["OriginalRaiser"] + " bet " + data["BetSize"] + " dollars")
+                if (data["BetSize"] >= 0) {
+                    $('#betSize').text(data["BetSize"]);
+                    $('#originalRaiser').text(data["OriginalRaiser"]);
+                    popup("info", "Your Turn", data["OriginalRaiser"] + " bet " + data["BetSize"] + " dollars")
+                } else if (data["BetSize"] === -1){
+                    Swal.fire({
+                        icon:"error",
+                        title:"Something went wrong!",
+                        text: "Please click OK",
+                        confirmButtonText:'<a href="/mobilepoker/start" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
+                    })
+                }
                 waitingturn()
             },
             error: function(data) {

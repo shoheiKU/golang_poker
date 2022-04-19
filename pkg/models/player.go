@@ -3,17 +3,9 @@ package models
 import (
 	"errors"
 	"log"
+
+	"github.com/shoheiKU/golang_poker/pkg/poker"
 )
-
-var ()
-
-// Player is a data structure for each player
-type Player struct {
-	playerSeat PlayerSeat
-	stack      int
-	bet        int
-	isPlaying  bool
-}
 
 // PlayerSeat is the number of Seat
 type PlayerSeat int
@@ -29,19 +21,34 @@ const (
 	Player8
 	Player9
 	MaxPlayer
+	PresetPlayer
 )
 
+// Player is a data structure for each player.
+type Player struct {
+	playerSeat  PlayerSeat
+	stack       int
+	bet         int
+	isPlaying   bool
+	pocketCards [2]poker.Card
+	hand        *poker.Hand
+}
+
+// NewPlayer is a constractor for Player.
 func NewPlayer(
 	playerSeat PlayerSeat,
 	stack int,
 	bet int,
 	isPlaying bool,
+	pocketCards *[2]poker.Card,
 ) *Player {
 	return &Player{
-		playerSeat: playerSeat,
-		stack:      stack,
-		bet:        bet,
-		isPlaying:  isPlaying,
+		playerSeat:  playerSeat,
+		stack:       stack,
+		bet:         bet,
+		isPlaying:   isPlaying,
+		pocketCards: *pocketCards,
+		hand:        nil,
 	}
 }
 
@@ -66,6 +73,10 @@ func ItoPlayerSeat(i int) PlayerSeat {
 		return Player8
 	case 8:
 		return Player9
+	case 9:
+		return MaxPlayer
+	case 10:
+		return PresetPlayer
 	default:
 		log.Println("This number is incorrect.")
 		return MaxPlayer
@@ -103,27 +114,40 @@ func AtoPlayerSeat(s string) PlayerSeat {
 func (p PlayerSeat) ToString() string {
 	switch p {
 	case Player1:
-		return "player1"
+		return "Player1"
 	case Player2:
-		return "player2"
+		return "Player2"
 	case Player3:
-		return "player3"
+		return "Player3"
 	case Player4:
-		return "player4"
+		return "Player4"
 	case Player5:
-		return "player5"
+		return "Player5"
 	case Player6:
-		return "player6"
+		return "Player6"
 	case Player7:
-		return "player7"
+		return "Player7"
 	case Player8:
-		return "player8"
+		return "Player8"
 	case Player9:
-		return "player9"
+		return "Player9"
+	case PresetPlayer:
+		return "Preset Player"
 	default:
 		log.Println("This number is incorrect.")
-		return "This number is incorrect."
+		return ""
 	}
+}
+
+func (p *Player) PlayerTemplateData() map[string]interface{} {
+	m := map[string]interface{}{}
+	m["bet"] = p.Bet()
+	m["stack"] = p.Stack()
+	m["playerSeat"] = p.PlayerSeat().ToString()
+	m["isPlaying"] = p.isPlaying
+	pocketCards := p.PocketCards()
+	m["pocketCards"] = map[string]poker.Card{"card1": pocketCards[0], "card2": pocketCards[1]}
+	return m
 }
 
 // NowPlayer returns PlayerSeat. I will change this later.
@@ -141,6 +165,22 @@ func (r PlayerSeat) NextSeat() PlayerSeat {
 	return PlayerSeat(int(r)+1) % r.MaxPlayer()
 }
 
+func (p *Player) SetPocketCards() {
+	p.pocketCards[0] = poker.Deck.DrawACard()
+	p.pocketCards[1] = poker.Deck.DrawACard()
+}
+
+func (p *Player) PocketCards() *[2]poker.Card {
+	return &p.pocketCards
+}
+func (p *Player) SetHand(communityCards *[5]poker.Card) {
+	hand := poker.ToHands(communityCards, &p.pocketCards)
+	p.hand = hand
+}
+
+func (p *Player) Hand() *poker.Hand {
+	return p.hand
+}
 func (p *Player) SetBet(bet int) error {
 	if p.stack < bet {
 		return errors.New("bet over stack")
@@ -174,8 +214,6 @@ func (p *Player) Deal() int {
 }
 
 func (p *Player) Fold() {
-	p.stack -= p.bet
-	p.bet = 0
 	p.isPlaying = false
 }
 
@@ -185,4 +223,11 @@ func (p *Player) PlayerSeat() PlayerSeat {
 
 func (p *Player) IsPlaying() bool {
 	return p.isPlaying
+}
+
+func (p *Player) Reset() {
+	p.bet = 0
+	p.isPlaying = true
+	p.SetPocketCards()
+	p.hand = nil
 }

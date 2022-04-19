@@ -1,0 +1,21 @@
+
+{{template "base" .}}
+
+{{define "title"}}
+    Result
+{{end}}
+
+
+{{define "content"}}
+    <div id="table" padding=10></div>
+    <div id="buttons">
+        <button type="button" class="btn btn-primary" onclick="displayCards()">Change</button>
+        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
+        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
+        <button type="button" class="btn btn-primary" onclick="river()">River</button>
+    </div>
+{{end}}
+
+
+{{define "js"}}
+{{end}}

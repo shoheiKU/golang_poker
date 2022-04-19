@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"net/http"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/shoheiKU/golang_poker/pkg/config"
 	"github.com/shoheiKU/golang_poker/pkg/handlers"
-	"github.com/shoheiKU/golang_poker/pkg/models"
+	"github.com/shoheiKU/golang_poker/pkg/poker"
 	"github.com/shoheiKU/golang_poker/pkg/render"
 )
 
@@ -20,15 +21,7 @@ var app config.AppConfig
 var session *scs.SessionManager
 
 func main() {
-	pokerRepo := handlers.NewPokerRepo(
-		map[models.PlayerSeat]chan int{},
-		[models.MaxPlayer]*models.Player{},
-		new(int),
-		new(int),
-		new(int),
-		new(models.PlayerSeat),
-		new(models.PlayerSeat),
-	)
+	pokerRepo := handlers.NewPokerRepo()
 	// set up AppConfig & load templates
 	// set true when in production
 	app.InProduction = false
@@ -38,6 +31,7 @@ func main() {
 	render.NewTemplates(&app)
 
 	// set up the session
+	gob.Register(poker.Card{})
 	session = app.Session
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true
