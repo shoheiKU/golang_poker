@@ -32,28 +32,59 @@ func (m *Repository) BetsizeAjax(w http.ResponseWriter, r *http.Request) {
 
 // WaitingTurnAjax is the function for waiting the player's turn.
 func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
-	betdata := map[string]interface{}{}
+	data := map[string]interface{}{}
 	player := m.getPlayerFromSession(r)
 	log.Println(player.PlayerSeat().ToString(), "is waiting")
 	select {
 	// request.Context is cancelled.
 	case <-r.Context().Done():
+		log.Println("Context Done")
 		return
 	// Get data from the former player.
-	case betsize := <-m.PokerRepo.PlayersCh[player.PlayerSeat()]:
+	case signal := <-m.PokerRepo.PlayersCh[player.PlayerSeat()]:
 		log.Println("Get data")
-		betdata["BetSize"] = m.PokerRepo.Bet
-		if m.PokerRepo.OriginalRaiser != models.PresetPlayer {
-			originalraiser := m.PokerRepo.OriginalRaiser
-			log.Println(betsize)
-			betdata["OriginalRaiser"] = originalraiser.ToString()
+		switch signal {
+		// signal -1 is used to redirect
+		case -1:
+			log.Println("-1")
+			data["Func"] = signal
+			data["Redirect"] = "/mobilepoker"
+			player.Reset()
+		// signal -2 is used to popup
+		case -2:
+			data["Func"] = signal
+			player.Reset()
+		// default sends bet data to cliant
+		default:
+			data["Func"] = signal
+			data["BetSize"] = m.PokerRepo.Bet
+			if m.PokerRepo.OriginalRaiser != models.PresetPlayer {
+				originalraiser := m.PokerRepo.OriginalRaiser
+				log.Println(signal)
+				data["OriginalRaiser"] = originalraiser.ToString()
+			}
 		}
 		// Write a json as a return to ajax.
-		betdataJson, err := json.Marshal(betdata)
+		dataJson, err := json.Marshal(data)
 		if err != nil {
 			log.Println(err)
 		}
-		w.Write(betdataJson)
+		w.Write(dataJson)
+	}
+}
+
+// WhoPlayAjax is the function for getting data of the player who is making decisions.
+func (m *Repository) WhoPlayAjax(w http.ResponseWriter, r *http.Request) {
+	log.Println("Who Play")
+	player := m.getPlayerFromSession(r)
+	select {
+	// request.Context is cancelled.
+	case <-r.Context().Done():
+		return
+	// Get data from the former player.
+	case p := <-m.PokerRepo.DecisionMakerCh[player.PlayerSeat()]:
+		log.Println("Get data in WhoPlayAjax")
+		w.Write([]byte(p.ToString()))
 	}
 }
 

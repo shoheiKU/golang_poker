@@ -63,19 +63,22 @@
             success: function(data) {
                 switch (data["Function"]){
                     case "frop":
-                        frop(data["Cards"])
+                        frop(data["Cards"]);
+                        break;
                     case "turn":
-                        turn(data["Card"])
+                        console.log(data);
+                        turn(data["Card"]);
+                        break;
                     case "river":
-                        river(data["Card"])
+                        river(data["Card"]);
+                        break
                     case "result":
-                        navResult()
+                        navResult();
                 }
                 waitingPhase()
             },
             error: function(data) {
                 alert('error');
-                waitingPhase()
             }
             });
         };

@@ -72,38 +72,62 @@
                 {{end}}
             {{end}}
         </div>
+        <div>
+            <p>Now Playing:</p>
+            <p id="decisionMaker"></p>
+        </div>
     {{end}}
+
 {{end}}
 
-
-{{define "js"}}
-    <script>
-        console.log("Waiting Ajax")
-        waitingturn();
-        function waitingturn(){
-            $.ajax({
-            url: '/mobilepoker/waitingturn',
-            dataType: 'json',
-            success: function(data) {
-                if (data["BetSize"] >= 0) {
-                    $('#betSize').text(data["BetSize"]);
-                    $('#originalRaiser').text(data["OriginalRaiser"]);
-                    popup("info", "Your Turn", data["OriginalRaiser"] + " bet " + data["BetSize"] + " dollars")
-                } else if (data["BetSize"] === -1){
-                    Swal.fire({
-                        icon:"error",
-                        title:"Something went wrong!",
-                        text: "Please click OK",
-                        confirmButtonText:'<a href="/mobilepoker/start" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
-                    })
+    {{define "js"}}
+        <script>
+            {{with $p := .Data.playerSeat}}
+                {{if ne $p "Preset Player"}}
+                    console.log("Waiting Ajax");
+                    waitingturn();
+                    whoplay();
+                {{end}}
+            {{end}}
+            function waitingturn(){
+                $.ajax({
+                url: '/mobilepoker/waitingturn',
+                dataType: 'json',
+                success: function(data) {
+                    if (data["Func"] >= 0) {
+                        $('#betSize').text(data["BetSize"]);
+                        $('#originalRaiser').text(data["OriginalRaiser"]);
+                        popup("info", "Your Turn", data["OriginalRaiser"] + " bet " + data["BetSize"] + " dollars")
+                    } else if (data["Func"] === -1){
+                        console.log(data)
+                        document.location.href = data["Redirect"]
+                    } else if (data["Func"] === -2) {
+                        Swal.fire({
+                            icon:"error",
+                            title:"Something went wrong!",
+                            text: "Please click OK",
+                            confirmButtonText:'<a href="/mobilepoker" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
+                        })
+                    }
+                    waitingturn()
+                },
+                error: function(data) {
+                    alert('error');
                 }
-                waitingturn()
-            },
-            error: function(data) {
-                alert('error');
-                waitingturn()
+                });
             }
-            });
-        }
-    </script>
+            function whoplay(){
+                $.ajax({
+                url: '/mobilepoker/whoplay',
+                dataType: 'text',
+                success: function(data) {
+                    $('#decisionMaker').text(data)
+                    whoplay()
+                },
+                error: function(data) {
+                    alert('error');
+                }
+                });
+            }
+        </script>
 {{end}}

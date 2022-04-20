@@ -30,6 +30,7 @@ func routes(app *config.AppConfig) http.Handler {
 		r.Post("/init", handlers.Repo.MobilePokerInitPost)
 		r.Get("/start", handlers.Repo.MobilePokerStartGame)
 		r.Get("/waitingturn", handlers.Repo.WaitingTurnAjax)
+		r.Get("/whoplay", handlers.Repo.WhoPlayAjax)
 		r.Route("/action", func(r chi.Router) {
 			r.Post("/check", handlers.Repo.MobilePokerCheckPost)
 
