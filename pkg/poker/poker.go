@@ -41,6 +41,39 @@ type Hand struct {
 	Cards Cards
 }
 
+type HandTemplateData struct {
+	Val   string
+	Cards Cards
+}
+
+func (v HandValue) ToString() string {
+	switch v {
+	case Highcard:
+		return "Highcard"
+	case OnePair:
+		return "OnePair"
+	case TwoPairs:
+		return "TwoPairs"
+	case ThreeOfAKind:
+		return "ThreeOfAKind"
+	case Straight:
+		return "Straight"
+	case Flush:
+		return "Flush"
+	case FullHouse:
+		return "FullHouse"
+	case FourOfAKind:
+		return "FourOfAKind"
+	case StraightFlush:
+		return "StraightFlush"
+	case RoyalFlush:
+		return "RoyalFlush"
+	default:
+		log.Println("This HandValue is incorrect.")
+		return ""
+	}
+}
+
 func (c Cards) Len() int {
 	return len(c)
 }

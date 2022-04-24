@@ -13,7 +13,7 @@ import (
 	"github.com/shoheiKU/golang_poker/pkg/render"
 )
 
-const ipAddr = "127.0.0.1"
+//const ipAddr = "127.0.0.1"
 const portNum = ":8081"
 const mainTmplDir = "./templates/"
 
@@ -42,7 +42,7 @@ func main() {
 	handlers.NewHandlers(repo)
 
 	srv := &http.Server{
-		Addr:    ipAddr + portNum,
+		Addr:/*ipAddr + */ portNum,
 		Handler: routes(&app),
 	}
 

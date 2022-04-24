@@ -29,6 +29,7 @@ type Player struct {
 	playerSeat  PlayerSeat
 	stack       int
 	bet         int
+	winpot      int
 	isPlaying   bool
 	pocketCards [2]poker.Card
 	hand        *poker.Hand
@@ -46,6 +47,7 @@ func NewPlayer(
 		playerSeat:  playerSeat,
 		stack:       stack,
 		bet:         bet,
+		winpot:      0,
 		isPlaying:   isPlaying,
 		pocketCards: *pocketCards,
 		hand:        nil,
@@ -181,6 +183,14 @@ func (p *Player) SetHand(communityCards *[5]poker.Card) {
 func (p *Player) Hand() *poker.Hand {
 	return p.hand
 }
+
+func (p *Player) HandTemplateData() *poker.HandTemplateData {
+	data := &poker.HandTemplateData{}
+	data.Val = p.Hand().Val.ToString()
+	data.Cards = p.Hand().Cards
+	return data
+}
+
 func (p *Player) SetBet(bet int) error {
 	if p.stack < bet {
 		return errors.New("bet over stack")
@@ -213,6 +223,14 @@ func (p *Player) Deal() int {
 	return val
 }
 
+func (p *Player) SetWinPot(i int) {
+	p.stack += i
+	p.winpot = i
+}
+
+func (p *Player) WinPot() int {
+	return p.winpot
+}
 func (p *Player) Fold() {
 	p.isPlaying = false
 }

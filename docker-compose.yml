@@ -1,0 +1,9 @@
+version: '3'
+services:
+    web:
+        build: .
+        tty: true
+        volumes:
+            - .:/go/app
+        ports:
+            - "8081:8081"

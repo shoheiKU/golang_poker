@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
+	"time"
 
 	"github.com/shoheiKU/golang_poker/pkg/models"
 	"github.com/shoheiKU/golang_poker/pkg/poker"
@@ -15,6 +17,7 @@ import (
 type PokerRepository struct {
 	PlayersCh         [models.MaxPlayer]chan int
 	PlayersList       [models.MaxPlayer]*models.Player
+	Winners           []*models.Player
 	ButtonPlayer      models.PlayerSeat
 	DecisionMakerCh   [models.MaxPlayer]chan models.PlayerSeat
 	Phase             int
@@ -33,6 +36,7 @@ func NewPokerRepo() *PokerRepository {
 	return &PokerRepository{
 		PlayersCh:         [models.MaxPlayer]chan int{},
 		PlayersList:       [models.MaxPlayer]*models.Player{},
+		Winners:           []*models.Player{},
 		ButtonPlayer:      models.PlayerSeat(models.PresetPlayer),
 		DecisionMakerCh:   [models.MaxPlayer]chan models.PlayerSeat{},
 		Phase:             0,
@@ -73,6 +77,18 @@ func (m *Repository) deal() {
 			p.Deal()
 		}
 	}
+	if m.PokerRepo.Phase == 4 {
+		num := len(m.PokerRepo.Winners)
+		pot := m.PokerRepo.Pot / num
+		remainder := m.PokerRepo.Pot % num
+		for _, player := range m.PokerRepo.Winners {
+			if player == m.PokerRepo.Winners[0] {
+				player.SetWinPot(pot + remainder)
+			} else {
+				player.SetWinPot(pot)
+			}
+		}
+	}
 }
 
 // isDeal returns whether or not all plaayers bet same amount of chips as a bool.
@@ -88,24 +104,41 @@ func (m *Repository) isDeal(nextplayer models.PlayerSeat) bool {
 	}
 }
 
-// nextPhase sends Phase to PhaseCh.
+// nextPhase sends the number of phase to PhaseCh.
 func (m *Repository) nextPhase() {
-	m.PokerRepo.PhaseCh <- m.PokerRepo.Phase
-	m.PokerRepo.Phase = (m.PokerRepo.Phase + 1) % 3
+	m.PokerRepo.Phase = (m.PokerRepo.Phase + 1) % 5
+	if m.PokerRepo.numOfActivePlayer == 1 {
+		// Result Phase(4)
+		m.PokerRepo.Phase = 4
+	}
+	phase := m.PokerRepo.Phase
+	log.Println("send data-----------------------------------------------------------")
+	m.PokerRepo.PhaseCh <- phase
 	log.Println("Phase :", m.PokerRepo.Phase)
+	// Set Original Raiser
 	first := m.nextPlayer(m.PokerRepo.ButtonPlayer)
 	m.PokerRepo.OriginalRaiser = first
-	m.playerChange(first)
+	// send phase data to each cliant
+	m.playerPhaseChange(phase)
 	m.PokerRepo.Bet = 0
 }
 
 // nextPlayer returns a next player.
 func (m *Repository) nextPlayer(s models.PlayerSeat) models.PlayerSeat {
+	// If the number of active players is less than 2, return Preset Player.
+	if m.PokerRepo.numOfActivePlayer <= 1 {
+		return models.PresetPlayer
+	}
 	next := s.NextSeat()
 	if m.PokerRepo.PlayersList[next] == nil || !m.PokerRepo.PlayersList[next].IsPlaying() || m.PokerRepo.PlayersList[next].Stack() == 0 {
 		return m.nextPlayer(next)
 	}
 	return next
+}
+
+// playHand returns a slice of pointers to models.Player who won the game.
+func (m *Repository) setWinners() {
+	m.PokerRepo.Winners = m.playHand()
 }
 
 // playHand returns a slice of pointers to models.Player who won the game.
@@ -127,6 +160,11 @@ func (m *Repository) playHand() []*models.Player {
 			}
 		}
 	}
+	sort.Slice(winners, func(i, j int) bool {
+		si := (winners[i].PlayerSeat() + models.MaxPlayer) % models.MaxPlayer
+		sj := (winners[j].PlayerSeat() + models.MaxPlayer) % models.MaxPlayer
+		return si < sj
+	})
 	return winners
 }
 
@@ -201,12 +239,27 @@ func (m *Repository) blindBet() {
 	m.PokerRepo.Bet = m.PokerRepo.BB
 }
 
+// playerChange sends each player the next player data with goroutine.
 func (m *Repository) playerChange(next models.PlayerSeat) {
 	for _, p := range m.PokerRepo.PlayersList {
 		if p == nil {
 			continue
 		}
-		m.PokerRepo.DecisionMakerCh[p.PlayerSeat()] <- next
+		go func(player *models.Player) {
+			m.PokerRepo.DecisionMakerCh[player.PlayerSeat()] <- next
+		}(p)
+	}
+}
+
+// playerPhaseChange sends each player the number of phase.
+func (m *Repository) playerPhaseChange(phase int) {
+	for _, p := range m.PokerRepo.PlayersList {
+		if p == nil {
+			continue
+		}
+		go func(player *models.Player) {
+			m.PokerRepo.PlayersCh[player.PlayerSeat()] <- phase
+		}(p)
 	}
 }
 
@@ -217,17 +270,85 @@ func (m *Repository) MobilePoker(w http.ResponseWriter, r *http.Request) {
 	if player == nil {
 		player = models.NewPlayer(models.PresetPlayer, 0, 0, false, &[2]poker.Card{})
 	}
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl",
-		&models.TemplateData{Data: player.PlayerTemplateData()})
+	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", &models.TemplateData{Data: player.PlayerTemplateData()})
 }
 
-// MobilePokerStart is the handler to start a new game.
-func (m *Repository) MobilePokerStartGame(w http.ResponseWriter, r *http.Request) {
+//.
+//└── data
+//    ├── bet
+//    │   └── int
+//    ├── stack
+//    │   └── int
+//    ├── playerSeat
+//    │   └── string
+//    ├── isPlaying
+//    │   └── bool
+//    ├── pocketCards
+//    │   ├── card1
+//    │   │   └── poker.Card
+//    │   └── card2
+//    │       └── poker.Card
+//    ├── hand
+//    │   └── poker.HandTemplateData
+//    ├── communityCards
+//    │   └── [5]poker.Card
+//    ├── winners
+//    │   └── []struct{}
+//    │       ├── PlayerSeat
+//    │       │   └── string
+//    │       ├── WinPot
+//    │       │   └── int
+//    │       └── Hand
+//    │           └── poker.HandTemplateData
+//    └── showdowns
+//        └── []struct{}
+//            ├── PlayerSeat
+//            │   └── string
+//            └── Hand
+//                └── poker.HandTemplateData
+
+// MobilePokerResult is the handler for the mobile result page.
+func (m *Repository) MobilePokerResult(w http.ResponseWriter, r *http.Request) {
 	player := m.getPlayerFromSession(r)
-	player.Reset()
-	m.setPlayerInSession(r, player)
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl",
-		&models.TemplateData{Data: player.PlayerTemplateData()})
+	data := map[string]interface{}{}
+	for key, val := range player.PlayerTemplateData() {
+		data[key] = val
+	}
+	data["hand"] = player.HandTemplateData()
+	data["communityCards"] = m.PokerRepo.CommunityCards
+
+	winnersstructs := make([]struct {
+		PlayerSeat string
+		WinPot     int
+		Hand       *poker.HandTemplateData
+	}, 0, len(m.PokerRepo.Winners))
+	showdowns := make([]struct {
+		PlayerSeat string
+		Hand       *poker.HandTemplateData
+	}, 0)
+
+	for _, p := range m.PokerRepo.Winners {
+		winnersstructs = append(winnersstructs, struct {
+			PlayerSeat string
+			WinPot     int
+			Hand       *poker.HandTemplateData
+		}{PlayerSeat: p.PlayerSeat().ToString(), WinPot: p.WinPot(), Hand: p.HandTemplateData()})
+	}
+	data["winners"] = winnersstructs
+
+	for _, p := range m.PokerRepo.PlayersList {
+		if p == nil || !p.IsPlaying() {
+			continue
+		}
+		showdowns = append(showdowns, struct {
+			PlayerSeat string
+			Hand       *poker.HandTemplateData
+		}{PlayerSeat: p.PlayerSeat().ToString(), Hand: p.HandTemplateData()})
+
+	}
+	data["showdowns"] = showdowns
+	render.RenderTemplate(w, r, "mobile_poker_result.page.tmpl",
+		&models.TemplateData{Data: data})
 }
 
 // Porker is the handler for the porker page.
@@ -238,59 +359,42 @@ func (m *Repository) Poker(w http.ResponseWriter, r *http.Request) {
 // PokerStartGame is the handler to start a new game.
 func (m *Repository) PokerStartGame(w http.ResponseWriter, r *http.Request) {
 	poker.Deck.Reset()
-	m.PokerRepo.Phase = 0
-	p := models.PlayerSeat(models.PresetPlayer)
+	m.PokerRepo.Phase = -1
+	m.PokerRepo.ButtonPlayer = models.PlayerSeat(models.PresetPlayer)
 	for _, player := range m.PokerRepo.PlayersList {
 		// skip nil player
 		if player == nil {
 			continue
 		}
 
-		if p == models.PresetPlayer {
-			p = player.PlayerSeat()
+		// set ButtonPlayer
+		if m.PokerRepo.ButtonPlayer == models.PresetPlayer {
+			m.PokerRepo.ButtonPlayer = player.PlayerSeat()
 		}
+
 		player.Reset()
+		// reset each page
+		log.Println("Before-------------------------------------")
+		m.PokerRepo.PlayersCh[player.PlayerSeat()] <- -1
+		log.Println("After-------------------------------------")
 	}
-	m.PokerRepo.ButtonPlayer = p
+	// Blind Bet
 	m.blindBet()
 	utg := m.PokerRepo.ButtonPlayer
+	// wait for redirect
+	time.Sleep(time.Second)
 	for i := 0; i < 3; i++ {
 		utg = m.nextPlayer(utg)
 	}
+	m.nextPhase()
 	m.playerChange(utg)
-	m.PokerRepo.PlayersCh[utg] <- m.PokerRepo.BB
-	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{})
+	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{Info: "Prefrop Phase"})
 }
 
 // PokerResetGame is the handler to reset the existing game.
 func (m *Repository) PokerResetGame(w http.ResponseWriter, r *http.Request) {
 	poker.Deck.Reset()
 	m.PokerRepo.Phase = 0
-	var p models.PlayerSeat
-	for _, player := range m.PokerRepo.PlayersList {
-		if player == nil {
-			continue
-		} else {
-			p = player.PlayerSeat()
-			break
-		}
-	}
-	m.PokerRepo.ButtonPlayer = p
-	for _, ch := range m.PokerRepo.PlayersCh {
-		if ch == nil {
-			continue
-		} else {
-			// Send data to WaitingTurnAjax.
-			// JS calls "/mobilepoker/start" -> (func MobilepokerStartGame).
-			ch <- -1
-		}
-	}
-	utg := m.PokerRepo.ButtonPlayer
-	for i := 0; i < 3; i++ {
-		utg = m.nextPlayer(utg)
-	}
-	m.playerChange(utg)
-	m.PokerRepo.PlayersCh[utg] <- m.PokerRepo.BB
 	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{})
 }
 
@@ -308,11 +412,12 @@ func (m *Repository) PokerNextGame(w http.ResponseWriter, r *http.Request) {
 	}
 	m.blindBet()
 	utg := m.PokerRepo.ButtonPlayer
+	// wait for redirect
+	time.Sleep(time.Second)
 	for i := 0; i < 3; i++ {
 		utg = m.nextPlayer(utg)
 	}
 	m.playerChange(utg)
-	m.PokerRepo.PlayersCh[utg] <- m.PokerRepo.BB
 	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{})
 }
 
@@ -321,15 +426,6 @@ func (m *Repository) PokerResult(w http.ResponseWriter, r *http.Request) {
 	player := models.NewPlayer(0, 500, 0, true, &[2]poker.Card{})
 	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "poker_result.page.tmpl",
-		&models.TemplateData{Data: player.PlayerTemplateData()})
-}
-
-// ServeCards is the handler for serving player cards.
-func (m *Repository) ServeCards(w http.ResponseWriter, r *http.Request) {
-	player := m.getPlayerFromSession(r)
-	player.SetPocketCards()
-	m.setPlayerInSession(r, player)
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl",
 		&models.TemplateData{Data: player.PlayerTemplateData()})
 }
 
@@ -346,9 +442,6 @@ func (m *Repository) MobilePokerInitPost(w http.ResponseWriter, r *http.Request)
 	m.PokerRepo.PlayersCh[player.PlayerSeat()] = make(chan int)
 	m.PokerRepo.PlayersList[player.PlayerSeat()] = player
 	m.PokerRepo.DecisionMakerCh[player.PlayerSeat()] = make(chan models.PlayerSeat)
-	if m.PokerRepo.ButtonPlayer == models.PresetPlayer {
-		m.PokerRepo.ButtonPlayer = player.PlayerSeat()
-	}
 	m.PokerRepo.numOfActivePlayer++
 	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "mobile_poker.page.tmpl",
@@ -367,16 +460,21 @@ func (m *Repository) MobilePokerCallPost(w http.ResponseWriter, r *http.Request)
 	td := models.TemplateData{}
 	if msg, ok := m.betFunc(player); ok {
 		// sucess message
-		td.Flash = msg
+		td.NotieFlash = msg
 		next := m.nextPlayer(player.PlayerSeat())
 		if m.isDeal(next) {
-			// Next Phase.
-			m.deal()
+			// Next Phase
 			m.nextPhase()
-			m.PokerRepo.PlayersCh[m.nextPlayer(m.PokerRepo.ButtonPlayer)] <- m.PokerRepo.Bet
+			if m.PokerRepo.Phase == 4 {
+				m.setWinners()
+			} else {
+				// send poker data to each cliant
+				// Next player of the button player is going to play.
+				m.playerChange(m.nextPlayer(m.PokerRepo.ButtonPlayer))
+			}
+			m.deal()
 		} else {
 			m.playerChange(next)
-			Repo.PokerRepo.PlayersCh[next] <- player.Bet()
 		}
 	} else {
 		// error message
@@ -394,16 +492,21 @@ func (m *Repository) MobilePokerAllInPost(w http.ResponseWriter, r *http.Request
 	td := models.TemplateData{}
 	if msg, ok := m.betFunc(player); ok {
 		// sucess message
-		td.Flash = msg
+		td.NotieFlash = msg
 		next := m.nextPlayer(player.PlayerSeat())
 		if m.isDeal(next) {
 			// Next Phase.
-			m.deal()
 			m.nextPhase()
-			m.PokerRepo.PlayersCh[m.nextPlayer(m.PokerRepo.ButtonPlayer)] <- m.PokerRepo.Bet
+			if m.PokerRepo.Phase == 4 {
+				m.setWinners()
+			} else {
+				// send poker data to each cliant
+				// Next player of the button player is going to play.
+				m.playerChange(m.nextPlayer(m.PokerRepo.ButtonPlayer))
+			}
+			m.deal()
 		} else {
 			m.playerChange(next)
-			Repo.PokerRepo.PlayersCh[next] <- player.Bet()
 		}
 	} else {
 		// error message
@@ -420,22 +523,28 @@ func (m *Repository) MobilePokerBetPost(w http.ResponseWriter, r *http.Request) 
 	bet, _ := strconv.Atoi(r.FormValue("Bet"))
 	err := player.SetBet(bet)
 	if err != nil {
+		m.playerChange(player.PlayerSeat())
 		render.RenderTemplate(w, r, "mobile_poker.page.tmpl", &models.TemplateData{Error: "You can't bet more than your stack.\n"})
 		return
 	}
 	td := models.TemplateData{}
 	if msg, ok := m.betFunc(player); ok {
 		// sucess message
-		td.Flash = msg
+		td.NotieFlash = msg
 		next := m.nextPlayer(player.PlayerSeat())
 		if m.isDeal(next) {
 			// Next Phase.
-			m.deal()
 			m.nextPhase()
-			m.PokerRepo.PlayersCh[m.nextPlayer(m.PokerRepo.ButtonPlayer)] <- m.PokerRepo.Bet
+			if m.PokerRepo.Phase == 4 {
+				m.setWinners()
+			} else {
+				// send poker data to each cliant
+				// Next player of the button player is going to play.
+				m.playerChange(m.nextPlayer(m.PokerRepo.ButtonPlayer))
+			}
+			m.deal()
 		} else {
 			m.playerChange(next)
-			Repo.PokerRepo.PlayersCh[next] <- player.Bet()
 		}
 	} else {
 		// error message
@@ -451,17 +560,22 @@ func (m *Repository) MobilePokerFoldPost(w http.ResponseWriter, r *http.Request)
 	player := m.getPlayerFromSession(r)
 	player.Fold()
 	td := models.TemplateData{}
-	td.Flash = "You folded.\n"
+	td.NotieFlash = "You folded.\n"
 	td.Data = player.PlayerTemplateData()
 	next := m.nextPlayer(player.PlayerSeat())
 	if m.isDeal(next) {
 		// Next Phase.
-		m.deal()
 		m.nextPhase()
-		m.PokerRepo.PlayersCh[m.nextPlayer(m.PokerRepo.ButtonPlayer)] <- m.PokerRepo.Bet
+		if m.PokerRepo.Phase == 4 {
+			m.setWinners()
+		} else {
+			// send poker data to each cliant
+			// Next player of the button player is going to play.
+			m.playerChange(m.nextPlayer(m.PokerRepo.ButtonPlayer))
+		}
+		m.deal()
 	} else {
 		m.playerChange(next)
-		Repo.PokerRepo.PlayersCh[next] <- player.Bet()
 	}
 	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", &td)
@@ -472,17 +586,22 @@ func (m *Repository) MobilePokerCheckPost(w http.ResponseWriter, r *http.Request
 	player := m.getPlayerFromSession(r)
 	player.Check()
 	td := models.TemplateData{}
-	td.Flash = "You checked.\n"
+	td.NotieFlash = "You checked.\n"
 	td.Data = player.PlayerTemplateData()
 	next := m.nextPlayer(player.PlayerSeat())
 	if m.isDeal(next) {
 		// Next Phase.
-		m.deal()
 		m.nextPhase()
-		m.PokerRepo.PlayersCh[m.nextPlayer(m.PokerRepo.ButtonPlayer)] <- m.PokerRepo.Bet
+		if m.PokerRepo.Phase == 4 {
+			m.setWinners()
+		} else {
+			// send poker data to each cliant
+			// Next player of the button player is going to play.
+			m.playerChange(m.nextPlayer(m.PokerRepo.ButtonPlayer))
+		}
+		m.deal()
 	} else {
 		m.playerChange(next)
-		Repo.PokerRepo.PlayersCh[next] <- player.Bet()
 	}
 	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", &td)

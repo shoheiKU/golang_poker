@@ -27,6 +27,7 @@
 
 {{define "js"}}
     <script>
+        let jqXHR
         displayCards();
         waitingPhase();
         function displayCards(){
@@ -53,38 +54,44 @@
             //カードを裏の画像から表の画像に切り替える
             $("#Card4").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
         };
-        function navResult(){
-            popup("info", "Result", '<a href="/poker/result">Result page</a>')
+        function navResult(url){
+            popup("info", "Result", '<a href=' + url + '>Result page</a>')
         };
         function waitingPhase() {
-            $.ajax({
+            console.log("mobileWaitingPhase")
+            jqXHR = $.ajax({
             url: '/poker/waitingphase',
             dataType: 'json',
             success: function(data) {
+                console.log(data)
                 switch (data["Function"]){
                     case "frop":
+                        popup("info", "Info", "Frop Phase")
                         frop(data["Cards"]);
                         break;
                     case "turn":
-                        console.log(data);
+                        popup("info", "Info", "Turn Phase")
                         turn(data["Card"]);
                         break;
                     case "river":
+                        popup("info", "Info", "River Phase")
                         river(data["Card"]);
                         break
                     case "result":
-                        navResult();
+                        navResult(data["URL"]);
+                        break;
                 }
                 waitingPhase()
             },
-            error: function(data) {
-                alert('error');
-            }
             });
         };
         $(function() {
         });
 
+        function stopAjax(){
+            jqXHR.abort();
+            document.betform.submit()
+        }
     </script>
 
     <script>
@@ -98,9 +105,6 @@
                     $('#betsize').text(data["betsize"]);
                     $('#potsize').text(data["potsize"]);
                 },
-                error: function(data) {
-                    alert('error');
-                }
                 });
             }
             );

@@ -44,25 +44,30 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 	case signal := <-m.PokerRepo.PlayersCh[player.PlayerSeat()]:
 		log.Println("Get data")
 		switch signal {
-		// signal -1 is used to redirect
+		// signal 0 indicates Prefrop phase
+		case 0:
+			data["func"] = signal
+		// signal 1 indicates Frop phase
+		case 1:
+			data["func"] = signal
+		// signal 2 indicates Turn phase
+		case 2:
+			data["func"] = signal
+		// signal 3 indicates River phase
+		case 3:
+			data["func"] = signal
+		// signal 4 indicates River phase
+		case 4:
+			data["func"] = signal
+			data["url"] = "/mobilepoker/result"
+		// signal -1 is used to reset and redirect
 		case -1:
 			log.Println("-1")
-			data["Func"] = signal
-			data["Redirect"] = "/mobilepoker"
-			player.Reset()
+			data["func"] = signal
+			data["redirect"] = "/mobilepoker"
 		// signal -2 is used to popup
 		case -2:
-			data["Func"] = signal
-			player.Reset()
-		// default sends bet data to cliant
-		default:
-			data["Func"] = signal
-			data["BetSize"] = m.PokerRepo.Bet
-			if m.PokerRepo.OriginalRaiser != models.PresetPlayer {
-				originalraiser := m.PokerRepo.OriginalRaiser
-				log.Println(signal)
-				data["OriginalRaiser"] = originalraiser.ToString()
-			}
+			data["func"] = signal
 		}
 		// Write a json as a return to ajax.
 		dataJson, err := json.Marshal(data)
@@ -74,36 +79,53 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 }
 
 // WhoPlayAjax is the function for getting data of the player who is making decisions.
-func (m *Repository) WhoPlayAjax(w http.ResponseWriter, r *http.Request) {
+func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{}
 	log.Println("Who Play")
 	player := m.getPlayerFromSession(r)
 	select {
 	// request.Context is cancelled.
 	case <-r.Context().Done():
+		log.Println("WaitingDataAjax is closed")
 		return
 	// Get data from the former player.
 	case p := <-m.PokerRepo.DecisionMakerCh[player.PlayerSeat()]:
-		log.Println("Get data in WhoPlayAjax")
-		w.Write([]byte(p.ToString()))
+		log.Println("Get data in WaitingDataAjax")
+		data["decisionMaker"] = p.ToString()
+		data["betSize"] = m.PokerRepo.Bet
+		if m.PokerRepo.OriginalRaiser != models.PresetPlayer {
+			originalraiser := m.PokerRepo.OriginalRaiser
+			data["originalRaiser"] = originalraiser.ToString()
+		}
+		// Write a json as a return to ajax.
+		dataJson, err := json.Marshal(data)
+		if err != nil {
+			log.Println(err)
+		}
+		w.Write(dataJson)
 	}
 }
 
 // WaitingPhaseAjax is the function for waiting next Phase.
 func (m *Repository) WaitingPhaseAjax(w http.ResponseWriter, r *http.Request) {
+	log.Println("WaitingPhaseAjax is called")
 	select {
 	// request.Context is cancelled.
 	case <-r.Context().Done():
+		log.Println("WaitingPhaseAjax context done")
 		return
 	// Get a data from the former player.
 	case phase := <-m.PokerRepo.PhaseCh:
-		log.Println("Get a data in WaitingPhaseAjax")
+		log.Println("Get a data in WaitingPhaseAjax phase: ", phase)
 		switch phase {
-		case 0:
-			m.Frop(w, r)
 		case 1:
-			m.Turn(w, r)
+			m.Frop(w, r)
 		case 2:
+			m.Turn(w, r)
+		case 3:
 			m.River(w, r)
+		case 4:
+			m.ToResultPage(w, r)
 		}
 	}
 }
@@ -156,24 +178,15 @@ func (m *Repository) River(w http.ResponseWriter, r *http.Request) {
 	w.Write(sJson)
 }
 
-// Result is the handler for Result.
-func (m *Repository) Result(w http.ResponseWriter, r *http.Request) {
+// ToResultPage shows a pop-up that navigates to ResultPage.
+func (m *Repository) ToResultPage(w http.ResponseWriter, r *http.Request) {
 	s := struct {
 		Function string
-	}{Function: "result"}
+		URL      string
+	}{Function: "result", URL: "/poker/result"}
 	sJson, err := json.Marshal(s)
 	if err != nil {
 		log.Println(err)
 	}
 	w.Write(sJson)
-}
-
-// ToResultPage shows a pop-up that navigates to ResultPage.
-func (m *Repository) ToResultPage(w http.ResponseWriter, r *http.Request) {
-	val := map[string]string{"popupstr": "Check Result"}
-	valJson, err := json.Marshal(val)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(valJson)
 }
