@@ -46,28 +46,28 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 		switch signal {
 		// signal 0 indicates Prefrop phase
 		case 0:
-			data["func"] = signal
+			data["func"] = "prefrop"
 		// signal 1 indicates Frop phase
 		case 1:
-			data["func"] = signal
+			data["func"] = "frop"
 		// signal 2 indicates Turn phase
 		case 2:
-			data["func"] = signal
+			data["func"] = "turn"
 		// signal 3 indicates River phase
 		case 3:
-			data["func"] = signal
-		// signal 4 indicates River phase
+			data["func"] = "river"
+		// signal 4 indicates ShowDown phase
 		case 4:
-			data["func"] = signal
+			data["func"] = "Result"
 			data["url"] = "/mobilepoker/result"
 		// signal -1 is used to reset and redirect
 		case -1:
 			log.Println("-1")
-			data["func"] = signal
+			data["func"] = "reset"
 			data["redirect"] = "/mobilepoker"
 		// signal -2 is used to popup
 		case -2:
-			data["func"] = signal
+			data["func"] = "popup"
 		}
 		// Write a json as a return to ajax.
 		dataJson, err := json.Marshal(data)

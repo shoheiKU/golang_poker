@@ -55,7 +55,13 @@
             $("#Card4").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
         };
         function navResult(url){
-            popup("info", "Result", '<a href=' + url + '>Result page</a>')
+            // Pop Up
+            Swal.fire({
+                icon:"info",
+                title:"Result",
+                text: "Show Down",
+                confirmButtonText:'<a href=' + data["url"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Result page</a>'
+            });
         };
         function waitingPhase() {
             console.log("mobileWaitingPhase")

@@ -109,23 +109,23 @@
         success: async function(data) {
             console.log("mobileWaitingTurn")
             switch (data["func"]) {
-                case 0:
+                case "prefrop":
                     // Prefrop
                     notie.alert({ type: 'info', text: "Prefrop Betting Phase", stay: true})
                     break;
-                case 1:
+                case "frop":
                     // Frop
                     notie.alert({ type: 'info', text: "Frop Betting Phase", stay: true})
                     break;
-                case 2:
+                case "turn":
                     // Turn
                     notie.alert({ type: 'info', text: "Turn Betting Phase", stay: true})
                     break;
-                case 3:
+                case "river":
                     // River
                     notie.alert({ type: 'info', text: "River Betting Phase", stay: true})
                     break;
-                case 4:
+                case "result":
                     // Result
                     notie.alert({ type: 'info', text: "Show Down", stay: true})
                     // Pop Up
@@ -136,13 +136,13 @@
                         confirmButtonText:'<a href=' + data["url"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
                     });
                     break;
-                case -1:
+                case "reset":
                     // Reset
                     console.log(jqXHRWBD)
                     stopAjax()
                     document.location.href = data["redirect"];
                     break;
-                case -2:
+                case "popup":
                     // Pop Up
                     Swal.fire({
                         icon:"error",

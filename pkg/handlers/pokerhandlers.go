@@ -189,9 +189,17 @@ func (m *Repository) compareHands(p1, p2 *models.Player) *models.Player {
 
 	// Compare cards' values
 	for i := 0; i < 5; i++ {
-		if h1.Cards[i].Num < h2.Cards[i].Num {
+		h1num := h1.Cards[i].Num
+		h2num := h2.Cards[i].Num
+		if h1num == 1 {
+			h1num += 13
+		}
+		if h2num == 1 {
+			h2num += 13
+		}
+		if h1num < h2num {
 			return p2
-		} else if h1.Cards[i].Num > h2.Cards[i].Num {
+		} else if h1num > h2num {
 			return p1
 		}
 	}
