@@ -15,4 +15,5 @@ type TemplateData struct {
 	NotieWarning string
 	NotieError   string
 	NotieInfo    string
+	Success      string
 }

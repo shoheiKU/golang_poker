@@ -27,9 +27,9 @@ const (
 // Player is a data structure for each player.
 type Player struct {
 	playerSeat  PlayerSeat
-	stack       int
-	bet         int
-	winpot      int
+	stack       *int
+	bet         *int
+	winpot      *int
 	isPlaying   bool
 	pocketCards [2]poker.Card
 	hand        *poker.Hand
@@ -45,9 +45,9 @@ func NewPlayer(
 ) *Player {
 	return &Player{
 		playerSeat:  playerSeat,
-		stack:       stack,
-		bet:         bet,
-		winpot:      0,
+		stack:       &stack,
+		bet:         &bet,
+		winpot:      new(int),
 		isPlaying:   isPlaying,
 		pocketCards: *pocketCards,
 		hand:        nil,
@@ -192,10 +192,11 @@ func (p *Player) HandTemplateData() *poker.HandTemplateData {
 }
 
 func (p *Player) SetBet(bet int) error {
-	if p.stack < bet {
+	if *p.stack < bet {
 		return errors.New("bet over stack")
 	} else {
-		p.bet = bet
+		log.Println("SetBet ", p.PlayerSeat(), bet)
+		*p.bet = bet
 		return nil
 	}
 }
@@ -205,31 +206,31 @@ func (p *Player) AllIn() {
 }
 
 func (p *Player) Bet() int {
-	return p.bet
+	return *p.bet
 }
 
 func (p *Player) Check() {
-	p.bet = 0
+	*p.bet = 0
 }
 
 func (p *Player) Stack() int {
-	return p.stack
+	return *p.stack
 }
 
 func (p *Player) Deal() int {
-	val := p.bet
-	p.stack -= p.bet
-	p.bet = 0
+	val := *p.bet
+	*p.stack -= *p.bet
+	*p.bet = 0
 	return val
 }
 
 func (p *Player) SetWinPot(i int) {
-	p.stack += i
-	p.winpot = i
+	*p.stack += i
+	*p.winpot = i
 }
 
 func (p *Player) WinPot() int {
-	return p.winpot
+	return *p.winpot
 }
 func (p *Player) Fold() {
 	p.isPlaying = false
@@ -244,7 +245,7 @@ func (p *Player) IsPlaying() bool {
 }
 
 func (p *Player) Reset() {
-	p.bet = 0
+	*p.bet = 0
 	p.isPlaying = true
 	p.SetPocketCards()
 	p.hand = nil

@@ -6,7 +6,18 @@
 
 
 {{define "content"}}
-    <div id="table" padding=10></div>
+    <div id="table" padding=10>
+        <h2>Pocket Cards</h2>
+        {{with .Data.communityCards}}
+            {{range $i, $v := .}}
+                {{if eq $v.Num 0}}
+                    <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
+                {{else}}
+                    <img src="/static/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}" width=200>
+                {{end}}
+            {{end}}
+        {{end}}
+    </div>
     <div id="buttons">
         <a href="/poker/start" class="btn btn-primary">Start Game</a>
         <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
@@ -27,77 +38,8 @@
 
 {{define "js"}}
     <script>
-        let jqXHR
-        displayCards();
-        waitingPhase();
-        function displayCards(){
-            let N = 5;
-            let text = "";
-            //fill from 0 to 51
-            for(let i = 0; i < N; i++) {
-                //imgタグのid属性を、”number+suit”の文字列として、裏面を表示する
-                text += '<img src="/static/cardsIMG/backside.jpg" id="Card' + i + '" width=200>';
-            }
-            document.getElementById("table").innerHTML = text;
-        };
-        function frop(cards){
-            $.each(cards, function(index, card){
-                //カードを裏の画像から表の画像に切り替える
-                $("#Card"+index).attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-            })
-        };
-        function turn(card){
-            //カードを裏の画像から表の画像に切り替える
-            $("#Card3").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-        };
-        function river(card){
-            //カードを裏の画像から表の画像に切り替える
-            $("#Card4").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-        };
-        function navResult(url){
-            // Pop Up
-            Swal.fire({
-                icon:"info",
-                title:"Result",
-                text: "Show Down",
-                confirmButtonText:'<a href=' + data["url"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Result page</a>'
-            });
-        };
-        function waitingPhase() {
-            console.log("mobileWaitingPhase")
-            jqXHR = $.ajax({
-            url: '/poker/waitingphase',
-            dataType: 'json',
-            success: function(data) {
-                console.log(data)
-                switch (data["Function"]){
-                    case "frop":
-                        popup("info", "Info", "Frop Phase")
-                        frop(data["Cards"]);
-                        break;
-                    case "turn":
-                        popup("info", "Info", "Turn Phase")
-                        turn(data["Card"]);
-                        break;
-                    case "river":
-                        popup("info", "Info", "River Phase")
-                        river(data["Card"]);
-                        break
-                    case "result":
-                        navResult(data["URL"]);
-                        break;
-                }
-                waitingPhase()
-            },
-            });
-        };
-        $(function() {
-        });
-
-        function stopAjax(){
-            jqXHR.abort();
-            document.betform.submit()
-        }
+        let jqXHR;
+        jqXHR = waitingPhase(jqXHR);
     </script>
 
     <script>

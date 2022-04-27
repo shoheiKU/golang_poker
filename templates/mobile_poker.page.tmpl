@@ -8,6 +8,7 @@
 {{define "content"}}
     {{with $td := .}}
         <div id="table" padding=10>
+            <h2>Pocket Cards</h2>
             {{with $td.Data.pocketCards}}
                 {{if eq .card1.Num 0}}
                     <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
@@ -23,14 +24,14 @@
             <form method="post" name="betform">
                 <input type="hidden" name="csrf_token" value="{{$td.CSRFToken}}">
                 <div class="form-inline">
-                    <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary" onclick="stopAjax()">Check</button>
+                    <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary">Check</button>
                     <label class="control-label">Bet Size: 
                         <input type="text" class="form-control" name="Bet">
-                        <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary" onclick="stopAjax()">Bet</button>
+                        <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary">Bet</button>
                     </label>
-                    <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary" onclick="stopAjax()">Call</button>
-                    <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary" onclick="stopAjax()">Fold</button>
-                    <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary" onclick="stopAjax()">All in</button>
+                    <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary">Call</button>
+                    <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary">Fold</button>
+                    <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary">All in</button>
                 </div>
             </form>
             {{else}}
@@ -38,18 +39,13 @@
             {{end}}
         </div>
         
+        <h2>Your data</h2>
         <div id="bet">
             <p>Your Bet Size: <span id="playerbetSize">{{$td.Data.bet}}</span></p>
         </div>
         <div id="stack">
             <p>Your Stack Size: <span id="playerstack">{{$td.Data.stack}}<span></p>
         </div>
-        {{if $td.Data.isPlaying}}
-            <div>
-                <p>Raiser: <span id="originalRaiser"></span></p>
-                <p>Bet Size: <span id="betSize"></span></p>
-            </div>
-        {{end}}
         <div>
             {{$p := $td.Data.playerSeat}}
             {{if eq $p "Preset Player"}}
@@ -72,6 +68,7 @@
                 <p>Player Seat: {{$p}}</p>
             {{end}}
         </div>
+        <h2>Present Player</h2>
         <div>
             <p>Now Playing: <span id="decisionMaker">
                 {{if $td.StringMap.nextPlayer}}
@@ -79,6 +76,21 @@
                 {{end}}
             </span></p>
         </div>
+        <h2>Raiser Data</h2>
+        {{if $td.Data.isPlaying}}
+            <div>
+                <p>Raiser: <span id="originalRaiser"></span></p>
+                <p>Bet Size: <span id="betSize"></span></p>
+            </div>
+        {{end}}
+        {{with $td.Success}}
+            <div class="betsuccess">
+                <div class="centering">
+                    <img src="/static/images/rocking-horse2.gif" style="margin: 0px 0px 15px 0px; height: 95%; object-fit: contain;">
+                    {{.}}
+                </div>
+            </div>
+        {{end}}
     {{end}}
 
 {{end}}
@@ -87,98 +99,13 @@
     <script>
     let player = {{.Data.playerSeat}}
     let nowPlayer 
-    let jqXHRWBD // jqXHR for mobileWaitingTurn
-    let jqXHRWT // jqXHR for mobileWaitingTurn
+    let jqXHRWBD  // a jqXHR for mobileWaitingBetData
+    let jqXHRWT  // a jqXHR for waitingTurn
     {{$p := .Data.playerSeat}}
     {{if ne $p "Preset Player"}}
         console.log("Waiting Ajax");
-        mobileWaitingTurn();
-        mobileWaitingBetData();
+        jqXHRWBD = mobileWaitingBetData(jqXHRWBD, player, nowPlayer);
+        jqXHRWT = mobileWaitingTurn(jqXHRWT, jqXHRWBD);
     {{end}}
-    
-    function stopAjax(){
-        jqXHRWBD.abort();
-        jqXHRWT.abort();
-        document.betform.submit()
-    }
-
-    function mobileWaitingTurn(){
-        jqXHRWT = $.ajax({
-        url: '/mobilepoker/waitingturn',
-        dataType: 'json',
-        success: async function(data) {
-            console.log("mobileWaitingTurn")
-            switch (data["func"]) {
-                case "prefrop":
-                    // Prefrop
-                    notie.alert({ type: 'info', text: "Prefrop Betting Phase", stay: true})
-                    break;
-                case "frop":
-                    // Frop
-                    notie.alert({ type: 'info', text: "Frop Betting Phase", stay: true})
-                    break;
-                case "turn":
-                    // Turn
-                    notie.alert({ type: 'info', text: "Turn Betting Phase", stay: true})
-                    break;
-                case "river":
-                    // River
-                    notie.alert({ type: 'info', text: "River Betting Phase", stay: true})
-                    break;
-                case "result":
-                    // Result
-                    notie.alert({ type: 'info', text: "Show Down", stay: true})
-                    // Pop Up
-                    Swal.fire({
-                        icon:"info",
-                        title:"Info",
-                        text: "Show Down",
-                        confirmButtonText:'<a href=' + data["url"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
-                    });
-                    break;
-                case "reset":
-                    // Reset
-                    console.log(jqXHRWBD)
-                    stopAjax()
-                    document.location.href = data["redirect"];
-                    break;
-                case "popup":
-                    // Pop Up
-                    Swal.fire({
-                        icon:"error",
-                        title:"Something went wrong!",
-                        text: "Please click OK",
-                        confirmButtonText:'<a href="/mobilepoker" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
-                    });
-                    break;
-            }
-            mobileWaitingTurn();
-        },
-        });
-    }
-
-    function mobileWaitingBetData(){
-        console.log("mobileWaitingBetData")
-        jqXHRWBD = $.ajax({
-        url: '/mobilepoker/pokerdata',
-        dataType: 'json',
-        success: function(data) {
-            console.log(data)
-            nowPlayer = data["decisionMaker"]
-            $('#decisionMaker').text(nowPlayer)
-            $('#betSize').text(data["betSize"]);
-            $('#originalRaiser').text(data["originalRaiser"]);
-            if (player === nowPlayer) {
-                text = data["originalRaiser"] + " bet " + data["betSize"] + " dollars"
-                popup("info", "Your Turn", text)
-            } else {
-                text = nowPlayer + " is playing"
-                temppopup("info", "Info", text, "center", 1)
-            }
-            mobileWaitingBetData()
-        },
-        });
-    }
-
     </script>
 {{end}}

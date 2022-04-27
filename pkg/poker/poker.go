@@ -51,23 +51,23 @@ func (v HandValue) ToString() string {
 	case Highcard:
 		return "Highcard"
 	case OnePair:
-		return "OnePair"
+		return "One pair"
 	case TwoPairs:
-		return "TwoPairs"
+		return "Two pairs"
 	case ThreeOfAKind:
-		return "ThreeOfAKind"
+		return "Three of a kind"
 	case Straight:
 		return "Straight"
 	case Flush:
 		return "Flush"
 	case FullHouse:
-		return "FullHouse"
+		return "Full house"
 	case FourOfAKind:
-		return "FourOfAKind"
+		return "Four of a kind"
 	case StraightFlush:
-		return "StraightFlush"
+		return "Straight flush"
 	case RoyalFlush:
-		return "RoyalFlush"
+		return "Royal flush"
 	default:
 		log.Println("This HandValue is incorrect.")
 		return ""

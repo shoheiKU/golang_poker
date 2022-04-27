@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/shoheiKU/golang_poker/pkg/models"
-	"github.com/shoheiKU/golang_poker/pkg/poker"
 )
 
 // BetsizeAjax is the handler for the betsize.
@@ -47,24 +46,40 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 		// signal 0 indicates Prefrop phase
 		case 0:
 			data["func"] = "prefrop"
+			data["text"] = PhaseString[0]
 		// signal 1 indicates Frop phase
 		case 1:
 			data["func"] = "frop"
+			data["cards"] = m.PokerRepo.CommunityCards[0:3]
+			data["text"] = PhaseString[1]
 		// signal 2 indicates Turn phase
 		case 2:
 			data["func"] = "turn"
+			data["card"] = m.PokerRepo.CommunityCards[3]
+			data["text"] = PhaseString[2]
 		// signal 3 indicates River phase
 		case 3:
 			data["func"] = "river"
+			data["card"] = m.PokerRepo.CommunityCards[4]
+			data["text"] = PhaseString[3]
 		// signal 4 indicates ShowDown phase
 		case 4:
-			data["func"] = "Result"
-			data["url"] = "/mobilepoker/result"
+			data["func"] = "result"
+			if r.FormValue("from") == "remotepoker" {
+				data["URL"] = "/remotepoker/result"
+			} else {
+				data["URL"] = "/mobilepoker/result"
+			}
+			data["text"] = PhaseString[4]
 		// signal -1 is used to reset and redirect
 		case -1:
 			log.Println("-1")
 			data["func"] = "reset"
-			data["redirect"] = "/mobilepoker"
+			if r.FormValue("from") == "remotepoker" {
+				data["redirect"] = "/remotepoker"
+			} else {
+				data["redirect"] = "/mobilepoker"
+			}
 		// signal -2 is used to popup
 		case -2:
 			data["func"] = "popup"
@@ -92,12 +107,18 @@ func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
 	case p := <-m.PokerRepo.DecisionMakerCh[player.PlayerSeat()]:
 		log.Println("Get data in WaitingDataAjax")
 		data["decisionMaker"] = p.ToString()
-		data["betSize"] = m.PokerRepo.Bet
-		if m.PokerRepo.OriginalRaiser != models.PresetPlayer {
+		data["betSize"] = *m.PokerRepo.Bet
+		if *m.PokerRepo.OriginalRaiser == models.PresetPlayer {
+			// Blind Bet
+			bbplayer := m.nextPlayer(m.nextPlayer(*m.PokerRepo.ButtonPlayer))
+			data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString()
+		} else {
 			originalraiser := m.PokerRepo.OriginalRaiser
+			log.Println(m.PokerRepo.OriginalRaiser)
 			data["originalRaiser"] = originalraiser.ToString()
 		}
 		// Write a json as a return to ajax.
+		log.Println(data)
 		dataJson, err := json.Marshal(data)
 		if err != nil {
 			log.Println(err)
@@ -117,76 +138,29 @@ func (m *Repository) WaitingPhaseAjax(w http.ResponseWriter, r *http.Request) {
 	// Get a data from the former player.
 	case phase := <-m.PokerRepo.PhaseCh:
 		log.Println("Get a data in WaitingPhaseAjax phase: ", phase)
+		data := map[string]interface{}{}
 		switch phase {
 		case 1:
-			m.Frop(w, r)
+			// Frop
+			data["function"] = "frop"
+			data["cards"] = m.PokerRepo.CommunityCards[0:3]
 		case 2:
-			m.Turn(w, r)
+			// Turn
+			data["function"] = "turn"
+			data["card"] = m.PokerRepo.CommunityCards[3]
 		case 3:
-			m.River(w, r)
+			// Frop
+			data["function"] = "frop"
+			data["card"] = m.PokerRepo.CommunityCards[4]
 		case 4:
-			m.ToResultPage(w, r)
+			// Result
+			data["function"] = "result"
+			data["URL"] = "/poker/result"
 		}
+		returnjson, err := json.Marshal(data)
+		if err != nil {
+			log.Println(err)
+		}
+		w.Write(returnjson)
 	}
-}
-
-// Frop is the handler for Frop.
-func (m *Repository) Frop(w http.ResponseWriter, r *http.Request) {
-	s := struct {
-		Function string
-		Cards    [3]poker.Card
-	}{Function: "frop", Cards: [3]poker.Card{}}
-	for i := 0; i < 3; i++ {
-		s.Cards[i] = poker.Deck.DrawACard()
-		m.PokerRepo.CommunityCards[i] = s.Cards[i]
-	}
-
-	sJson, err := json.Marshal(s)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(sJson)
-}
-
-// Turn is the handler for Turn.
-func (m *Repository) Turn(w http.ResponseWriter, r *http.Request) {
-	s := struct {
-		Function string
-		Card     poker.Card
-	}{Function: "turn", Card: poker.Card{}}
-	s.Card = poker.Deck.DrawACard()
-	m.PokerRepo.CommunityCards[3] = s.Card
-	sJson, err := json.Marshal(s)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(sJson)
-}
-
-// River is the handler for River.
-func (m *Repository) River(w http.ResponseWriter, r *http.Request) {
-	s := struct {
-		Function string
-		Card     poker.Card
-	}{Function: "river", Card: poker.Card{}}
-	s.Card = poker.Deck.DrawACard()
-	m.PokerRepo.CommunityCards[4] = s.Card
-	sJson, err := json.Marshal(s)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(sJson)
-}
-
-// ToResultPage shows a pop-up that navigates to ResultPage.
-func (m *Repository) ToResultPage(w http.ResponseWriter, r *http.Request) {
-	s := struct {
-		Function string
-		URL      string
-	}{Function: "result", URL: "/poker/result"}
-	sJson, err := json.Marshal(s)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(sJson)
 }
