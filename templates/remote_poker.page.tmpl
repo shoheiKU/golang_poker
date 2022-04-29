@@ -6,116 +6,140 @@
 
 
 {{define "content"}}
-    {{with $td := .}}
-        <div id="table" padding=10>
-            <h2>Community Cards</h2>
-            {{with $td.Data.communityCards}}
-                {{range $i, $v := .}}
-                    {{if eq $v.Num 0}}
-                        <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
-                    {{else}}
-                        <img src="/static/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}" width=200>
-                    {{end}}
-                {{end}}
-            {{end}}
-            <h2>Pocket Cards</h2>
-            {{with $td.Data.pocketCards}}
-                {{if eq .card1.Num 0}}
-                    <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
-                    <img src="/static/cardsIMG/backside.jpg" id="Card2" width=200>
+    {{$playerdata := .Data.player}}
+    <div id="table" padding=10>
+        <h2>Community Cards</h2>
+        {{with .Data.repo.communityCards}}
+            {{range $i, $v := .}}
+                {{if eq $v.Num 0}}
+                    <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
                 {{else}}
-                    <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1" width=200>
-                    <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2" width=200>
+                    <img src="/static/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}" width=200>
                 {{end}}
             {{end}}
-        </div>
-        <div class="bettingbutton">
-            {{if $td.Data.isPlaying}}
-            <form method="post" name="betform">
-                <input type="hidden" name="csrf_token" value="{{$td.CSRFToken}}">
-                <div class="form-inline">
-                    <button type="submit" formaction="/remotepoker/action/check" class="btn btn-primary" onclick="stopAjax()">Check</button>
-                    <label class="control-label">Bet Size: 
-                        <input type="text" class="form-control" name="Bet">
-                        <button type="submit" formaction="/remotepoker/action/bet" class="btn btn-primary" onclick="stopAjax()">Bet</button>
-                    </label>
-                    <button type="submit" formaction="/remotepoker/action/call" class="btn btn-primary" onclick="stopAjax()">Call</button>
-                    <button type="submit" formaction="/remotepoker/action/fold" class="btn btn-primary" onclick="stopAjax()">Fold</button>
-                    <button type="submit" formaction="/remotepoker/action/all-in" class="btn btn-primary" onclick="stopAjax()">All in</button>
-                </div>
+        {{end}}
+        <h2>Pocket Cards</h2>
+        {{with $playerdata.pocketCards}}
+            {{if eq .card1.Num 0}}
+                <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
+                <img src="/static/cardsIMG/backside.jpg" id="Card2" width=200>
+            {{else}}
+                <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1" width=200>
+                <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2" width=200>
+            {{end}}
+        {{end}}
+    </div>
+    <div class="buttons">
+        <a href="/poker/start" class="btn btn-primary">Start Game</a>
+        <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
+        <a href="/poker/next" class="btn btn-primary">Next Game</a>
+        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
+        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
+        <button type="button" class="btn btn-primary" onclick="river()">River</button>
+    </div>
+    <div class="bettingbuttons">
+        {{if $playerdata.isPlaying}}
+        <form method="post" name="betform">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="form-inline-block">
+                <button type="submit" formaction="/remotepoker/action/check" class="btn btn-primary" onclick="stopAjax()">Check</button>
+                <label class="control-label">Bet Size: 
+                    <input type="text" class="form-control" style="display: inline; width: auto; vertical-align: middle;" name="Bet">
+                </label>
+                <button type="submit" formaction="/remotepoker/action/bet" class="btn btn-primary" onclick="stopAjax()">Bet</button>
+                <button type="submit" formaction="/remotepoker/action/call" class="btn btn-primary" onclick="stopAjax()">Call</button>
+                <button type="submit" formaction="/remotepoker/action/fold" class="btn btn-primary" onclick="stopAjax()">Fold</button>
+                <button type="submit" formaction="/remotepoker/action/all-in" class="btn btn-primary" onclick="stopAjax()">All in</button>
+            </div>
+        </form>
+        {{else}}
+            <p>Please wait for the next game!</p>
+        {{end}}
+    </div>
+    
+    <h2>Your data</h2>
+    <div id="bet">
+        <p>Your Bet Size: <span id="playerBetSize">{{$playerdata.bet}}</span></p>
+    </div>
+    <div id="stack">
+        <p>Your Stack Size: <span id="playerStack">{{$playerdata.stack}}<span></p>
+    </div>
+    <div>
+        {{$p := $playerdata.playerSeat}}
+        {{if eq $p "Preset Player"}}
+            <form action="/remotepoker/init" method="post" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <select class="form-control" name="PlayerSeat">
+                    <option value="Player1">Player1</option>
+                    <option value="Player2">Player2</option>
+                    <option value="Player3">Player3</option>
+                    <option value="Player4">Player4</option>
+                    <option value="Player5">Player5</option>
+                    <option value="Player6">Player6</option>
+                    <option value="Player7">Player7</option>
+                    <option value="Player8">Player8</option>
+                    <option value="Player9">Player9</option>
+                </select>
+                <input type="submit" class="btn btn-primary" value="Init">
             </form>
-            {{else}}
-                <p>Please wait for the next game!</p>
-            {{end}}
-        </div>
-        
-        <h2>Your data</h2>
-        <div id="bet">
-            <p>Your Bet Size: <span id="playerbetSize">{{$td.Data.bet}}</span></p>
-        </div>
-        <div id="stack">
-            <p>Your Stack Size: <span id="playerstack">{{$td.Data.stack}}<span></p>
-        </div>
-        <div>
-            {{$p := $td.Data.playerSeat}}
-            {{if eq $p "Preset Player"}}
-                <form action="/remotepoker/init" method="post" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{$td.CSRFToken}}">
-                    <select class="form-control" name="PlayerSeat">
-                        <option value="Player1">Player1</option>
-                        <option value="Player2">Player2</option>
-                        <option value="Player3">Player3</option>
-                        <option value="Player4">Player4</option>
-                        <option value="Player5">Player5</option>
-                        <option value="Player6">Player6</option>
-                        <option value="Player7">Player7</option>
-                        <option value="Player8">Player8</option>
-                        <option value="Player9">Player9</option>
-                    </select>
-                    <input type="submit" class="btn btn-primary" value="Init">
-                </form>
-            {{else}}
-                <p>Player Seat: {{$p}}</p>
-            {{end}}
-        </div>
-        <h2>Present Player</h2>
-        <div>
-            <p>Now Playing: <span id="decisionMaker">
-                {{if $td.StringMap.nextPlayer}}
-                    {{$td.StringMap.nextPlayer}}
-                {{end}}
-            </span></p>
-        </div>
-        <h2>Raiser Data</h2>
-        {{if $td.Data.isPlaying}}
-            <div>
-                <p>Raiser: <span id="originalRaiser"></span></p>
-                <p>Bet Size: <span id="betSize"></span></p>
-            </div>
+        {{else}}
+            <p>Player Seat: {{$p}}</p>
         {{end}}
-        {{with $td.Success}}
-            <div class="betsuccess">
-                <div class="centering">
-                    <img src="/static/images/rocking-horse2.gif" style="margin: 0px 0px 15px 0px; height: 95%; object-fit: contain;">
-                    {{.}}
-                </div>
+    </div>
+    <h2>Present Player</h2>
+    <div>
+        <p>Now Playing: <span id="decisionMaker">
+
+        </span></p>
+    </div>
+    <h2>Raiser Data</h2>
+    {{if $playerdata.isPlaying}}
+        <div>
+            <p>Raiser: <span id="originalRaiser"></span></p>
+            <p>Bet Size: <span id="betSize"></span></p>
+        </div>
+    {{end}}
+    {{with .Success}}
+        <div class="betsuccess">
+            <div class="centering">
+                <img src="/static/images/rocking-horse.gif" style="margin: 0px 0px 15px 0px; height: 95%; object-fit: contain;">
+                {{.}}
             </div>
-        {{end}}
+        </div>
     {{end}}
 
 {{end}}
 
 {{define "js"}}
     <script>
-    let player = {{.Data.playerSeat}}
-    let nowPlayer 
+    {{$p := .Data.player.playerSeat}}
+    {{$repo := .Data.repo}}
+    let player = {{$p}}
+    let nowPlayer = {{$repo.decisionMaker}}
     let jqXHRWBD  // a jqXHR for mobileWaitingBetData
     let jqXHRWT   // a jqXHR for waitingTurn
-    {{$p := .Data.playerSeat}}
     {{if ne $p "Preset Player"}}
         console.log("Waiting Ajax");
         jqXHRWBD = mobileWaitingBetData(jqXHRWBD, player, nowPlayer);
         jqXHRWT = waitingTurn(jqXHRWT, jqXHRWBD);
+    {{end}}
+    {{if eq $repo.phase "Show Down"}}
+        // Pop Up
+        Swal.fire({
+            icon:"info",
+            title:"Info",
+            text: "Show Down",
+            confirmButtonText:'<a href="/remotepoker/result" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
+        });
+    {{else if ne .Data.player.pocketCards.card1.Num 0}}
+        notie.alert({ type: 'info', text: {{$repo.phase}}, stay: true})
+        if (player === nowPlayer) {
+            text = {{$repo.originalRaiser}} + " bet " + {{$repo.bet}} + " dollars"
+            popup("info", "Your Turn", text)
+        } else {
+            text = nowPlayer + " is playing"
+            temppopup("info", "Info", text, "center", 1)
+        }
     {{end}}
         function waitingTurn(jqXHRWT, jqXHRWBD){
             jqXHRWT = $.ajax({
@@ -124,6 +148,8 @@
             dataType: 'json',
             success: async function(data) {
                 console.log("waitingTurn")
+                $('#playerBetSize').text(data["bet"])
+                $('#playerStack').text(data["stack"])
                 switch (data["func"]) {
                     case "prefrop":
                         // Prefrop
@@ -152,7 +178,7 @@
                             icon:"info",
                             title:"Info",
                             text: "Show Down",
-                            confirmButtonText:'<a href=' + data["url"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
+                            confirmButtonText:'<a href=' + data["URL"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
                         });
                         break;
                     case "reset":
@@ -178,3 +204,9 @@
         }
     </script>
 {{end}}
+
+
+<script>
+    $('#remote').addClass("active")
+    $('#remote').attr("aria-current", "page")
+</script>

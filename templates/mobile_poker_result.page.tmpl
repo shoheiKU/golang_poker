@@ -18,7 +18,7 @@
             <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="PocketCard2" width=200>
         {{end}}
         </div>
-        <div id="buttons">
+        <div class="buttons">
             <a href="/poker/start" class="btn btn-primary">Start Game</a>
             <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
             <a href="/poker/next" class="btn btn-primary">Next Game</a>
@@ -75,3 +75,9 @@
 
 {{define "js"}}
 {{end}}
+
+
+<script>
+    $('#mobile').addClass("active")
+    $('#mobile').attr("aria-current", "page")
+</script>

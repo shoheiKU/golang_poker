@@ -5,5 +5,18 @@
 {{end}}
 
 {{define "content"}}
-    <p> This is my about page. </p>
+    <h1>About</h1>
+    <h2>
+        コンセプト
+    </h2>
+    <p>
+        ポーカー(テキサスホールデム)のwebアプリです。友人と集まって卓を囲んで1台のタブレットをみんなでのぞき込みながらプレーすることを想定しています。
+        各々が自分のスマートフォンのカードと中央のタブレットを見ながらプレーします。
+    </p>
+    <img src="/static/images/playstyle.png" width="60%">
 {{end}}
+
+<script>
+    $('#about').addClass("active")
+    $('#about').attr("aria-current", "page")
+</script>

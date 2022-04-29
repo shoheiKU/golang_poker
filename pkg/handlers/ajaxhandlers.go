@@ -41,6 +41,8 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 		return
 	// Get data from the former player.
 	case signal := <-m.PokerRepo.PlayersCh[player.PlayerSeat()]:
+		data["bet"] = player.Bet()
+		data["stack"] = player.Stack()
 		log.Println("Get data")
 		switch signal {
 		// signal 0 indicates Prefrop phase
@@ -110,7 +112,7 @@ func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
 		data["betSize"] = *m.PokerRepo.Bet
 		if *m.PokerRepo.OriginalRaiser == models.PresetPlayer {
 			// Blind Bet
-			bbplayer := m.nextPlayer(m.nextPlayer(*m.PokerRepo.ButtonPlayer))
+			bbplayer := m.PokerRepo.nextPlayer(m.PokerRepo.nextPlayer(*m.PokerRepo.ButtonPlayer))
 			data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString()
 		} else {
 			originalraiser := m.PokerRepo.OriginalRaiser

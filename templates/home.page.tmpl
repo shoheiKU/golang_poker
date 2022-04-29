@@ -5,5 +5,38 @@
 {{end}}
 
 {{define "content"}}
-    <p> This is my home page. </p>
+    <h1>
+        プレイ方法
+    </h1>
+    <h2>
+        集まってプレーする方法
+    </h2>
+    <ol>
+         <li>タブレットで porker ページを開く</li>
+         <li>各プレイヤーのスマホで mobile porker ページを開く</li>
+         <li>各プレイヤーの初期化をする(Player番号を選択してinit)</li>
+         <li>タブレットでstartボタンを押す</li>
+         <li>ポップアップに従ってベットする</li>
+         <li>ゲーム終了</li>
+         <li>タブレットでResultボタンを押す</li>
+         <li>スマホでShow downボタンを押す</li>
+         <li>結果を確認する</li>
+    </ol>
+    <h2>
+        離れてプレーする方法
+    </h2>
+    <ol>
+         <li>各プレイヤーのスマホで remote porker ページを開く</li>
+         <li>各プレイヤーの初期化をする(Player番号を選択してinit)</li>
+         <li>誰かのスマホでstartボタンを押す</li>
+         <li>ポップアップに従ってベットする</li>
+         <li>ゲーム終了</li>
+         <li>スマホでShow downボタンを押す</li>
+         <li>結果を確認する</li>
+    </ol>
 {{end}}
+
+<script>
+    $('#home').addClass("active")
+    $('#home').attr("aria-current", "page")
+</script>

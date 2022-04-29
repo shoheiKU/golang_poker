@@ -8,7 +8,7 @@
 {{define "content"}}
     <div id="table" padding=10>
         <h2>Pocket Cards</h2>
-        {{with .Data.communityCards}}
+        {{with .Data.repo.communityCards}}
             {{range $i, $v := .}}
                 {{if eq $v.Num 0}}
                     <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
@@ -18,7 +18,7 @@
             {{end}}
         {{end}}
     </div>
-    <div id="buttons">
+    <div class="buttons">
         <a href="/poker/start" class="btn btn-primary">Start Game</a>
         <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
         <a href="/poker/next" class="btn btn-primary">Next Game</a>
@@ -59,3 +59,9 @@
         });
     </script>
 {{end}}
+
+
+<script>
+    $('#poker').addClass("active")
+    $('#poker').attr("aria-current", "page")
+</script>
