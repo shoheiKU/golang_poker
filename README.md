@@ -1,6 +1,7 @@
 # Golang Poker
 PokerをGo言語を使って実装しました。現在開発途中です。
-Git Hubから落としてきてdocker-composeすれば動きます。  
+(http://3.125.87.5:8081/ EC2上においています。)
+Git Hubから落としてきてdocker-composeすれば動きます。
 - 使用言語  
 	- Golang, JS(jQuery), html, css  
 - 使用技術  
