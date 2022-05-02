@@ -27,10 +27,11 @@ const (
 // Player is a data structure for each player.
 type Player struct {
 	playerSeat  PlayerSeat
-	stack       *int
-	bet         *int
-	winpot      *int
+	stack       int
+	bet         int
+	totalwinpot int
 	isPlaying   bool
+	isAllIn     bool
 	pocketCards [2]poker.Card
 	hand        *poker.Hand
 }
@@ -45,10 +46,11 @@ func NewPlayer(
 ) *Player {
 	return &Player{
 		playerSeat:  playerSeat,
-		stack:       &stack,
-		bet:         &bet,
-		winpot:      new(int),
+		stack:       stack,
+		bet:         bet,
+		totalwinpot: 0,
 		isPlaying:   isPlaying,
+		isAllIn:     false,
 		pocketCards: *pocketCards,
 		hand:        nil,
 	}
@@ -145,10 +147,12 @@ func (p *Player) PlayerTemplateData() map[string]interface{} {
 	m := map[string]interface{}{}
 	m["bet"] = p.Bet()
 	m["stack"] = p.Stack()
+	m["winPot"] = p.WinPot()
 	m["playerSeat"] = p.PlayerSeat().ToString()
 	m["isPlaying"] = p.isPlaying
 	pocketCards := p.PocketCards()
 	m["pocketCards"] = map[string]poker.Card{"card1": pocketCards[0], "card2": pocketCards[1]}
+	m["hand"] = p.HandTemplateData()
 	return m
 }
 
@@ -185,6 +189,9 @@ func (p *Player) Hand() *poker.Hand {
 }
 
 func (p *Player) HandTemplateData() *poker.HandTemplateData {
+	if p.hand == nil {
+		return nil
+	}
 	data := &poker.HandTemplateData{}
 	data.Val = p.Hand().Val.ToString()
 	data.Cards = p.Hand().Cards
@@ -192,45 +199,46 @@ func (p *Player) HandTemplateData() *poker.HandTemplateData {
 }
 
 func (p *Player) SetBet(bet int) error {
-	if *p.stack < bet {
+	if p.stack < bet {
 		return errors.New("bet over stack")
 	} else {
 		log.Println("SetBet ", p.PlayerSeat(), bet)
-		*p.bet = bet
+		p.bet = bet
 		return nil
 	}
 }
 
 func (p *Player) AllIn() {
 	p.bet = p.stack
+	p.isAllIn = true
 }
 
 func (p *Player) Bet() int {
-	return *p.bet
+	return p.bet
 }
 
 func (p *Player) Check() {
-	*p.bet = 0
+	p.bet = 0
 }
 
 func (p *Player) Stack() int {
-	return *p.stack
+	return p.stack
 }
 
 func (p *Player) Deal() int {
-	val := *p.bet
-	*p.stack -= *p.bet
-	*p.bet = 0
-	return val
+	bet := p.bet
+	p.stack -= p.bet
+	p.bet = 0
+	return bet
 }
 
-func (p *Player) SetWinPot(i int) {
-	*p.stack += i
-	*p.winpot = i
+func (p *Player) AddWinPot(i int) {
+	p.stack += i
+	p.totalwinpot += i
 }
 
 func (p *Player) WinPot() int {
-	return *p.winpot
+	return p.totalwinpot
 }
 func (p *Player) Fold() {
 	p.isPlaying = false
@@ -244,9 +252,15 @@ func (p *Player) IsPlaying() bool {
 	return p.isPlaying
 }
 
+func (p *Player) IsAllIn() bool {
+	return p.isAllIn
+}
+
 func (p *Player) Reset() {
-	*p.bet = 0
+	p.bet = 0
+	p.totalwinpot = 0
 	p.isPlaying = true
+	p.isAllIn = false
 	p.SetPocketCards()
 	p.hand = nil
 }

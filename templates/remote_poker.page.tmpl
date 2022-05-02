@@ -7,9 +7,10 @@
 
 {{define "content"}}
     {{$playerdata := .Data.player}}
+    {{$repo := .Data.repo}}
     <div id="table" padding=10>
         <h2>Community Cards</h2>
-        {{with .Data.repo.communityCards}}
+        {{with $repo.communityCards}}
             {{range $i, $v := .}}
                 {{if eq $v.Num 0}}
                     <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
@@ -30,9 +31,9 @@
         {{end}}
     </div>
     <div class="buttons">
-        <a href="/poker/start" class="btn btn-primary">Start Game</a>
-        <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
-        <a href="/poker/next" class="btn btn-primary">Next Game</a>
+        <a href="/remotepoker/start" class="btn btn-primary">Start Game</a>
+        <a href="/remotepoker/reset" class="btn btn-primary">Reset Game</a>
+        <a href="/remotepoker/next" class="btn btn-primary">Next Game</a>
         <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
         <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
         <button type="button" class="btn btn-primary" onclick="river()">River</button>
@@ -57,7 +58,7 @@
         {{end}}
     </div>
     
-    <h2>Your data</h2>
+    <h2>Your Data</h2>
     <div id="bet">
         <p>Your Bet Size: <span id="playerBetSize">{{$playerdata.bet}}</span></p>
     </div>
@@ -95,8 +96,8 @@
     <h2>Raiser Data</h2>
     {{if $playerdata.isPlaying}}
         <div>
-            <p>Raiser: <span id="originalRaiser"></span></p>
-            <p>Bet Size: <span id="betSize"></span></p>
+            <p>Raiser: <span id="originalRaiser">{{$repo.originalRaiser}}</span></p>
+            <p>Bet Size: <span id="betSize">{{$repo.bet}}</span></p>
         </div>
     {{end}}
     {{with .Success}}

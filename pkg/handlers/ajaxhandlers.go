@@ -109,10 +109,10 @@ func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
 	case p := <-m.PokerRepo.DecisionMakerCh[player.PlayerSeat()]:
 		log.Println("Get data in WaitingDataAjax")
 		data["decisionMaker"] = p.ToString()
-		data["betSize"] = *m.PokerRepo.Bet
-		if *m.PokerRepo.OriginalRaiser == models.PresetPlayer {
+		data["betSize"] = m.PokerRepo.Bet
+		if m.PokerRepo.OriginalRaiser == models.PresetPlayer {
 			// Blind Bet
-			bbplayer := m.PokerRepo.nextPlayer(m.PokerRepo.nextPlayer(*m.PokerRepo.ButtonPlayer))
+			bbplayer := m.PokerRepo.nextPlayer(m.PokerRepo.nextPlayer(m.PokerRepo.ButtonPlayer))
 			data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString()
 		} else {
 			originalraiser := m.PokerRepo.OriginalRaiser

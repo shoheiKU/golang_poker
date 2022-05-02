@@ -6,76 +6,97 @@
 
 
 {{define "content"}}
-    {{with $data := .Data}}
-        <div id="table" padding=10>
-        {{range $i, $v := $data.communityCards}}
-            <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="Card {{- $i -}}" width=200>
+    {{$playerdata := .Data.player}}
+    {{$repo := .Data.repo}}
+    {{$winners := .Data.winners}}
+    {{$showdown := .Data.showdown}}
+    <h2>Community Cards</h2>
+    <div id="table" padding=10>
+    {{range $i, $v := $repo.communityCards}}
+        {{if eq $v.Num 0}}
+        <img src="/static/cardsIMG/backside.jpg" id="Card {{- $i -}}" width=200>
+        {{else}}
+        <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="Card {{- $i -}}" width=200>
         {{end}}
-        </div>
-        <div id="mobiletable" padding=10>
-        {{with $data.pocketCards}}
-            <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="PocketCard1" width=200>
-            <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="PocketCard2" width=200>
-        {{end}}
-        </div>
-        <div class="buttons">
-            <a href="/poker/start" class="btn btn-primary">Start Game</a>
-            <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
-            <a href="/poker/next" class="btn btn-primary">Next Game</a>
-            <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
-            <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
-            <button type="button" class="btn btn-primary" onclick="river()">River</button>
-        </div>
-        <div id="stack">
-            <p>Your Stack Size: <span id="playerstack">{{$data.stack}}<span></p>
-        </div>
-        <div>
-            <p>Player Seat: {{$data.playerSeat}}</p>
-        </div>
-        <div>
-            <p>Your hand: {{$data.hand.Val}}</p>
+    {{end}}
+    </div>
+    <h2>Pocket Cards</h2>
+    <div id="mobiletable" padding=10>
+    {{with $playerdata.pocketCards}}
+        <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="PocketCard1" width=200>
+        <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="PocketCard2" width=200>
+    {{end}}
+    </div>
+    <div class="buttons">
+        <a href="/poker/start" class="btn btn-primary">Start Game</a>
+        <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
+        <a href="/poker/next" class="btn btn-primary">Next Game</a>
+        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
+        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
+        <button type="button" class="btn btn-primary" onclick="river()">River</button>
+    </div>
+    <h2>Your Data</h2>
+    <div id="stack">
+        <p>Your Stack Size: <span id="playerstack">{{$playerdata.stack}}<span></p>
+    </div>
+    <div>
+        <p>Player Seat: {{$playerdata.playerSeat}}</p>
+    </div>
+    <div>
+        {{with $playerdata.hand}}
+            <p>Your hand: {{.Val}}</p>
             <p>
-            {{range $i, $v := $data.hand.Cards}}
+            {{range $i, $v := .Cards}}
                 <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="HandCard {{- $i -}}" width=100>
             {{end}}
             </p>
-        </div>
-        <div id="winners">
-            {{range $_, $p := $data.winners}}
-                <p>
-                    Player Seat: {{$p.PlayerSeat}}
-                    Win Pot: {{$p.WinPot}}
-                    Hand: {{$p.Hand.Val}}
-                </p>
-                <p>
-                {{range $i, $v := $p.Hand.Cards}}
+        {{end}}
+    </div>
+    <h2>Winner</h2>
+    <div id="winners">
+        {{range $_, $p := $winners}}
+            <script> console.log({{$p}}) </script>
+            <p>
+                Player Seat: {{$p.playerSeat}}
+                Win Pot: {{$p.winPot}}
+                {{with $p.hand}}
+                    Hand: {{.Val}}
+                {{end}}
+            </p>
+            <p>
+            {{with $p.hand}}
+                {{range $i, $v := .Cards}}
                     <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
                 {{end}}
-                </p>
-                <br>
             {{end}}
-        </div>
-        <div>
-            {{range $_, $p := $data.showdowns}}
-                <p>
-                    Player Seat: {{$p.PlayerSeat}}
-                    Hand: {{$p.Hand.Val}}
-                </p>
-                <p>
-                {{range $i, $v := $p.Hand.Cards}}
+            </p>
+            <br>
+        {{end}}
+    </div>
+    <h2>Show Down</h2>
+    <div>
+        {{range $_, $p := $showdown}}
+            <p>
+                Player Seat: {{$p.playerSeat}}
+                {{with $p.hand}}
+                    Hand: {{.Val}}
+                {{end}}
+            </p>
+            <p>
+            {{with $p.hand}}
+                {{range $i, $v := .Cards}}
                     <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
                 {{end}}
-                </p>
-                <br>
             {{end}}
-        </div>
-    {{end}}
+            </p>
+            <br>
+        {{end}}
+    </div>
 {{end}}
 
 
 {{define "js"}}
 {{end}}
-
 
 <script>
     $('#mobile').addClass("active")
