@@ -3,12 +3,12 @@ package models
 import (
 	"errors"
 	"log"
-
-	"github.com/shoheiKU/golang_poker/pkg/poker"
 )
 
 // PlayerSeat is the number of Seat
 type PlayerSeat int
+
+const InitialStack = 1000
 
 const (
 	Player1 PlayerSeat = iota
@@ -32,8 +32,8 @@ type Player struct {
 	totalwinpot int
 	isPlaying   bool
 	isAllIn     bool
-	pocketCards [2]poker.Card
-	hand        *poker.Hand
+	pocketCards [2]Card
+	hand        *Hand
 }
 
 // NewPlayer is a constractor for Player.
@@ -42,7 +42,7 @@ func NewPlayer(
 	stack int,
 	bet int,
 	isPlaying bool,
-	pocketCards *[2]poker.Card,
+	pocketCards *[2]Card,
 ) *Player {
 	return &Player{
 		playerSeat:  playerSeat,
@@ -151,7 +151,7 @@ func (p *Player) PlayerTemplateData() map[string]interface{} {
 	m["playerSeat"] = p.PlayerSeat().ToString()
 	m["isPlaying"] = p.isPlaying
 	pocketCards := p.PocketCards()
-	m["pocketCards"] = map[string]poker.Card{"card1": pocketCards[0], "card2": pocketCards[1]}
+	m["pocketCards"] = map[string]Card{"card1": pocketCards[0], "card2": pocketCards[1]}
 	m["hand"] = p.HandTemplateData()
 	return m
 }
@@ -172,27 +172,27 @@ func (r PlayerSeat) NextSeat() PlayerSeat {
 }
 
 func (p *Player) SetPocketCards() {
-	p.pocketCards[0] = poker.Deck.DrawACard()
-	p.pocketCards[1] = poker.Deck.DrawACard()
+	p.pocketCards[0] = Deck.DrawACard()
+	p.pocketCards[1] = Deck.DrawACard()
 }
 
-func (p *Player) PocketCards() *[2]poker.Card {
+func (p *Player) PocketCards() *[2]Card {
 	return &p.pocketCards
 }
-func (p *Player) SetHand(communityCards *[5]poker.Card) {
-	hand := poker.ToHands(communityCards, &p.pocketCards)
+func (p *Player) SetHand(communityCards *[5]Card) {
+	hand := ToHands(communityCards, &p.pocketCards)
 	p.hand = hand
 }
 
-func (p *Player) Hand() *poker.Hand {
+func (p *Player) Hand() *Hand {
 	return p.hand
 }
 
-func (p *Player) HandTemplateData() *poker.HandTemplateData {
+func (p *Player) HandTemplateData() *HandTemplateData {
 	if p.hand == nil {
 		return nil
 	}
-	data := &poker.HandTemplateData{}
+	data := &HandTemplateData{}
 	data.Val = p.Hand().Val.ToString()
 	data.Cards = p.Hand().Cards
 	return data
@@ -257,6 +257,16 @@ func (p *Player) IsAllIn() bool {
 }
 
 func (p *Player) Reset() {
+	p.bet = 0
+	p.totalwinpot = 0
+	p.isPlaying = true
+	p.isAllIn = false
+	p.SetPocketCards()
+	p.hand = nil
+}
+
+func (p *Player) Init() {
+	p.stack = InitialStack
 	p.bet = 0
 	p.totalwinpot = 0
 	p.isPlaying = true

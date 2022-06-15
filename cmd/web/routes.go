@@ -22,7 +22,6 @@ func routes(app *config.AppConfig) http.Handler {
 		r.Get("/next", handlers.Repo.PokerNextGame)
 		r.Get("/result", handlers.Repo.PokerResult)
 	})
-	mux.Get("/getpotdata", handlers.Repo.BetsizeAjax)
 
 	mux.Route("/mobilepoker", func(r chi.Router) {
 		r.Get("/", handlers.Repo.MobilePoker)
@@ -42,7 +41,7 @@ func routes(app *config.AppConfig) http.Handler {
 	mux.Route("/remotepoker", func(r chi.Router) {
 		r.Get("/", handlers.Repo.RemotePoker)
 		r.Post("/init", handlers.Repo.RemotePokerInitPost)
-		r.Get("/result", handlers.Repo.PokerResult)
+		r.Get("/result", handlers.Repo.RemotePokerResult)
 		r.Route("/action", func(r chi.Router) {
 			r.Post("/check", handlers.Repo.RemotePokerCheckPost)
 
@@ -59,10 +58,14 @@ func routes(app *config.AppConfig) http.Handler {
 
 	mux.Route("/ajax", func(r chi.Router) {
 		r.Get("/waitingphase", handlers.Repo.WaitingPhaseAjax)
-		r.Get("/waitingturn", handlers.Repo.WaitingTurnAjax)
+		r.Get("/mobilewaitingphase", handlers.Repo.MobileWaitingPhaseAjax)
 		r.Get("/waitingpokerdata", handlers.Repo.WaitingDataAjax)
 	})
 
+	mux.Route("/control", func(r chi.Router) {
+		r.Get("/", handlers.Repo.Control)
+		r.Post("/reset", handlers.Repo.PokerRepoResetPost)
+	})
 	mux.Get("/contact", handlers.Repo.Contact)
 
 	fileServer := http.FileServer(http.Dir("./static/"))

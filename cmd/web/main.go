@@ -9,7 +9,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/shoheiKU/golang_poker/pkg/config"
 	"github.com/shoheiKU/golang_poker/pkg/handlers"
-	"github.com/shoheiKU/golang_poker/pkg/poker"
+	"github.com/shoheiKU/golang_poker/pkg/models"
 	"github.com/shoheiKU/golang_poker/pkg/render"
 )
 
@@ -31,7 +31,7 @@ func main() {
 	render.NewTemplates(&app)
 
 	// set up the session
-	gob.Register(poker.Card{})
+	gob.Register(models.Card{})
 	session = app.Session
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true

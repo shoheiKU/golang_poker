@@ -2,35 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/shoheiKU/golang_poker/pkg/models"
 )
 
-// BetsizeAjax is the handler for the betsize.
-func (m *Repository) BetsizeAjax(w http.ResponseWriter, r *http.Request) {
-	betdata := map[string]int{}
-	a := 0
-	player := m.getPlayerFromSession(r)
-	go func() {
-		fmt.Println("Waiting Scan")
-		fmt.Scan(&a)
-		m.PokerRepo.PlayersCh[player.PlayerSeat()] <- a
-	}()
-	betdata["betsize"] = <-m.PokerRepo.PlayersCh[player.PlayerSeat()]
-	betdata["potsize"] = 100
-
-	betdataJson, err := json.Marshal(betdata)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Write(betdataJson)
-}
-
-// WaitingTurnAjax is the function for waiting the player's turn.
-func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
+// MobileWaitingPhaseAjax is the function for waiting next Phase in a cliant page.
+func (m *Repository) MobileWaitingPhaseAjax(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{}
 	player := m.getPlayerFromSession(r)
 	log.Println(player.PlayerSeat().ToString(), "is waiting")
@@ -95,7 +74,7 @@ func (m *Repository) WaitingTurnAjax(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// WhoPlayAjax is the function for getting data of the player who is making decisions.
+// WaitingDataAjax is the function for getting other players' betting data.
 func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{}
 	log.Println("Who Play")
@@ -129,7 +108,7 @@ func (m *Repository) WaitingDataAjax(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// WaitingPhaseAjax is the function for waiting next Phase.
+// WaitingPhaseAjax is the function for waiting next Phase in a poker page.
 func (m *Repository) WaitingPhaseAjax(w http.ResponseWriter, r *http.Request) {
 	log.Println("WaitingPhaseAjax is called")
 	select {
@@ -144,19 +123,22 @@ func (m *Repository) WaitingPhaseAjax(w http.ResponseWriter, r *http.Request) {
 		switch phase {
 		case 1:
 			// Frop
-			data["function"] = "frop"
+			data["func"] = "frop"
 			data["cards"] = m.PokerRepo.CommunityCards[0:3]
+			data["text"] = PhaseString[1]
 		case 2:
 			// Turn
-			data["function"] = "turn"
+			data["func"] = "turn"
 			data["card"] = m.PokerRepo.CommunityCards[3]
+			data["text"] = PhaseString[2]
 		case 3:
 			// Frop
-			data["function"] = "frop"
+			data["func"] = "frop"
 			data["card"] = m.PokerRepo.CommunityCards[4]
+			data["text"] = PhaseString[3]
 		case 4:
 			// Result
-			data["function"] = "result"
+			data["func"] = "result"
 			data["URL"] = "/poker/result"
 		}
 		returnjson, err := json.Marshal(data)

@@ -12,29 +12,29 @@
         <h2>Pocket Cards</h2>
         {{with $playerdata.pocketCards}}
             {{if eq .card1.Num 0}}
-                <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
-                <img src="/static/cardsIMG/backside.jpg" id="Card2" width=200>
+                <img src="/static/images/cardsIMG/backside.jpg" id="Card1">
+                <img src="/static/images/cardsIMG/backside.jpg" id="Card2">
             {{else}}
-                <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1" width=200>
-                <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2" width=200>
+                <img src="/static/images/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1">
+                <img src="/static/images/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2">
             {{end}}
         {{end}}
     </div>
     <div class="bettingbuttons">
         {{if $playerdata.isPlaying}}
-        <form method="post" name="betform">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <div class="form-inline-block">
-                <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary">Check</button>
-                <label class="control-label">Bet Size: 
-                    <input type="text" class="form-control" style="display: inline; width: auto; vertical-align: middle;" name="Bet">
-                </label>
-                <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary">Bet</button>
-                <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary">Call</button>
-                <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary">Fold</button>
-                <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary">All in</button>
-            </div>
-        </form>
+            <form method="post" name="betform">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-inline-block">
+                    <button type="submit" formaction="/mobilepoker/action/check" class="btn btn-primary">Check</button>
+                    <label class="control-label">Bet Size: 
+                        <input type="text" class="form-control" style="display: inline; width: auto; vertical-align: middle;" name="Bet">
+                        <button type="submit" formaction="/mobilepoker/action/bet" class="btn btn-primary">Bet</button>
+                    </label>
+                    <button type="submit" formaction="/mobilepoker/action/call" class="btn btn-primary">Call</button>
+                    <button type="submit" formaction="/mobilepoker/action/fold" class="btn btn-primary">Fold</button>
+                    <button type="submit" formaction="/mobilepoker/action/all-in" class="btn btn-primary">All in</button>
+                </div>
+            </form>
         {{else}}
             <p>Please wait for the next game!</p>
         {{end}}
@@ -98,32 +98,41 @@
     {{$repo := .Data.repo}}
     <script>
     let player = {{$p}}
-    let nowPlayer 
+    let nowPlayer = {{$repo.decisionMaker}}
+    let phase = {{$repo.phase}}
     let jqXHRWBD  // a jqXHR for mobileWaitingBetData
-    let jqXHRWT  // a jqXHR for waitingTurn
-    {{if eq $repo.phase "Show Down"}}
+    let jqXHRWP  // a jqXHR for waitingPhase
+    bettingbuttonsDisable()
+
+    if (player !== "Preset Player") {
+        console.log("Waiting Ajax");
+        jqXHRWBD = mobileWaitingBetData(jqXHRWBD, player, nowPlayer);
+        jqXHRWP = mobileWaitingPhase(jqXHRWP, jqXHRWBD);
+    }
+
+    if (phase === "Show Down") {
+        notie.alert({ type: 'info', text: {{$repo.phase}}, stay: true})
         // Pop Up
         Swal.fire({
             icon:"info",
             title:"Info",
             text: "Show Down",
-            confirmButtonText:'<a href="/remotepoker/result" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
+            confirmButtonText:'<a href="/mobilepoker/result" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
         });
-    {{else if ne .Data.player.pocketCards.card1.Num 0}}
+    } else if ($("#Card1").attr('src') !== "/static/images/cardsIMG/backside.jpg") {
         notie.alert({ type: 'info', text: {{$repo.phase}}, stay: true})
+        // Pocket cards are already served.
         if (player === nowPlayer) {
+            // This player's turn
+            bettingbuttonsEnable()
             text = {{$repo.originalRaiser}} + " bet " + {{$repo.bet}} + " dollars"
             popup("info", "Your Turn", text)
         } else {
+            // The other player's turn
             text = nowPlayer + " is playing"
             temppopup("info", "Info", text, "center", 1)
         }
-    {{end}}
-    {{if ne $p "Preset Player"}}
-        console.log("Waiting Ajax");
-        jqXHRWBD = mobileWaitingBetData(jqXHRWBD, player, nowPlayer);
-        jqXHRWT = mobileWaitingTurn(jqXHRWT, jqXHRWBD);
-    {{end}}
+    }
     </script>
 {{end}}
 

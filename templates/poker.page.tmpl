@@ -7,13 +7,13 @@
 
 {{define "content"}}
     <div id="table" padding=10>
-        <h2>Pocket Cards</h2>
+        <h2>Community Cards</h2>
         {{with .Data.repo.communityCards}}
             {{range $i, $v := .}}
                 {{if eq $v.Num 0}}
-                    <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
+                    <img src="/static/images/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}">
                 {{else}}
-                    <img src="/static/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}" width=200>
+                    <img src="/static/images/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}">
                 {{end}}
             {{end}}
         {{end}}
@@ -22,16 +22,12 @@
         <a href="/poker/start" class="btn btn-primary">Start Game</a>
         <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
         <a href="/poker/next" class="btn btn-primary">Next Game</a>
-        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
-        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
-        <button type="button" class="btn btn-primary" onclick="river()">River</button>
     </div>
     <div>
         <p>Bet size: </p>
         <p id="betsize"></p>
         <p>Pot size: </p>
         <p id="potsize"></p>
-        <button type="button" class="btn btn-primary" id="reload">Reload</button>
     </div>
 {{end}}
 
@@ -40,23 +36,6 @@
     <script>
         let jqXHR;
         jqXHR = waitingPhase(jqXHR);
-    </script>
-
-    <script>
-        $(function() {
-            $('#reload').click(
-            function() {
-                $.ajax({
-                url: '/getpotdata',
-                dataType: 'json',
-                success: function(data) {
-                    $('#betsize').text(data["betsize"]);
-                    $('#potsize').text(data["potsize"]);
-                },
-                });
-            }
-            );
-        });
     </script>
 {{end}}
 

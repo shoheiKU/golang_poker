@@ -26,9 +26,9 @@
         {{end}}
     </div>
     <div class="buttons">
-        <a href="/poker/start" class="btn btn-primary">Start Game</a>
-        <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
-        <a href="/poker/next" class="btn btn-primary">Next Game</a>
+        <a href="/remotepoker/start" class="btn btn-primary">Start Game</a>
+        <a href="/remotepoker/reset" class="btn btn-primary">Reset Game</a>
+        <a href="/remotepoker/next" class="btn btn-primary">Next Game</a>
     </div>
     <h2>Your Data</h2>
     <div id="stack">
@@ -91,12 +91,12 @@
 
 
 {{define "js"}}
-    <script>
-        mobileWaitForRedirect();
+    <script> 
+        remoteWaitForRedirect();
     </script>
 {{end}}
 
 <script>
-    $('#mobile').addClass("active")
-    $('#mobile').attr("aria-current", "page")
+    $('#remote').addClass("active")
+    $('#remote').attr("aria-current", "page")
 </script>

@@ -10,26 +10,21 @@
     {{$repo := .Data.repo}}
     {{$winners := .Data.winners}}
     {{$showdown := .Data.showdown}}
-    <h2>Community Cards</h2>
     <div id="table" padding=10>
-    {{range $i, $v := $repo.communityCards}}
-        <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="Card {{- $i -}}" width=200>
-    {{end}}
-    </div>
-    <h2>Pocket Cards</h2>
-    <div id="mobiletable" padding=10>
-    {{with $playerdata.pocketCards}}
-        <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="PocketCard1" width=200>
-        <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="PocketCard2" width=200>
-    {{end}}
+        <h2>Community Cards</h2>
+        {{range $i, $v := $repo.communityCards}}
+            <img src="/static/images/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="Card {{- $i -}}">
+        {{end}}
+        <h2>Pocket Cards</h2>
+        {{with $playerdata.pocketCards}}
+            <img src="/static/images/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="PocketCard1">
+            <img src="/static/images/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="PocketCard2">
+        {{end}}
     </div>
     <div class="buttons">
         <a href="/poker/start" class="btn btn-primary">Start Game</a>
         <a href="/poker/reset" class="btn btn-primary">Reset Game</a>
         <a href="/poker/next" class="btn btn-primary">Next Game</a>
-        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
-        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
-        <button type="button" class="btn btn-primary" onclick="river()">River</button>
     </div>
     <h2>Your Data</h2>
     <div id="stack">
@@ -43,7 +38,7 @@
             <p>Your hand: {{.Val}}</p>
             <p>
             {{range $i, $v := .Cards}}
-                <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="HandCard {{- $i -}}" width=100>
+                <img src="/static/images/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" id="HandCard {{- $i -}}" width=100>
             {{end}}
             </p>
         {{end}}
@@ -61,7 +56,7 @@
             <p>
             {{with $p.hand}}
                 {{range $i, $v := .Cards}}
-                    <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
+                    <img src="/static/images/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
                 {{end}}
             {{end}}
             </p>
@@ -80,7 +75,7 @@
             <p>
             {{with $p.hand}}
                 {{range $i, $v := .Cards}}
-                    <img src="/static/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
+                    <img src="/static/images/cardsIMG/ {{- $v.Num -}}  _of_  {{- $v.Suit -}} .png" width=100>
                 {{end}}
             {{end}}
             </p>

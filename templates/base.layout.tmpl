@@ -19,13 +19,22 @@
             div.content {
                 padding: 0px 5px 10px 5px;
             }
+
             div img {
+                margin:15px;
+            }
+
+            #table img {
+                width: 200px;
                 margin:15px;
             }
             @media screen and (max-width: 479px) { /*window size is less than 479*/
                 #table img {
-                    width: 120;
+                    width: 110px;
+                    margin:2px;
                 }
+
+                #bettingbuttons
             }
 
             div.bettingbuttons, div.buttons {
@@ -86,6 +95,9 @@
                         <a class="nav-link" href="/remotepoker" id="remote">Remote Poker</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/control" id="control">Control</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/contact" id="contact">Contact</a>
                     </li>
 
@@ -100,25 +112,8 @@
         </div>
 
 
+        <script type="text/javascript" src="/static/js/app.js"></script>
         <script>
-            function popup(type, title, text){
-                Swal.fire({
-                    icon: type,
-                    title: title,
-                    text: text,
-                })
-            }
-
-            function temppopup(type, title, text, pos, sec){
-                Swal.fire({
-                    icon: type,
-                    title: title,
-                    text: text,
-                    showConfirmButton: false,
-                    timer: sec*1000,
-                    position: pos,
-                })
-            }
             {{with .Flash}}
                 popup("success", "Success", "{{.}}")
             {{end}}
@@ -145,156 +140,7 @@
             {{end}}
 
         </script>
-        
-        <!-- {{block "mobilepoker" .}} -->
-            <script>
-                function stopAjax(jqXHRWBD, jqXHRWT){
-                    jqXHRWBD.abort();
-                    jqXHRWT.abort();
-                    document.betform.submit()
-                }
 
-                function mobileWaitingTurn(jqXHRWT, jqXHRWBD){
-                    jqXHRWT = $.ajax({
-                    url: '/ajax/waitingturn',
-                    dataType: 'json',
-                    success: async function(data) {
-                        console.log("mobileWaitingTurn")
-                        switch (data["func"]) {
-                            case "prefrop":
-                                // Prefrop
-                                notie.alert({ type: 'info', text: data["text"], stay: true})
-                                break;
-                            case "frop":
-                                // Frop
-                                notie.alert({ type: 'info', text: data["text"], stay: true})
-                                frop(data["cards"]);
-                                break;
-                            case "turn":
-                                // Turn
-                                notie.alert({ type: 'info', text: data["text"], stay: true})
-                                turn(data["card"]);
-                                break;
-                            case "river":
-                                // River
-                                notie.alert({ type: 'info', text: data["text"], stay: true})
-                                river(data["card"]);
-                                break;
-                            case "result":
-                                // Result
-                                notie.alert({ type: 'info', text: data["text"], stay: true})
-                                // Pop Up
-                                Swal.fire({
-                                    icon:"info",
-                                    title:"Info",
-                                    text: "Show Down",
-                                    confirmButtonText:'<a href=' + data["URL"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
-                                });
-                                break;
-                            case "reset":
-                                // Reset
-                                console.log(jqXHRWBD)
-                                stopAjax(jqXHRWBD, jqXHRWT)
-                                document.location.href = data["redirect"];
-                                break;
-                            case "popup":
-                                // Pop Up
-                                Swal.fire({
-                                    icon:"error",
-                                    title:"Something went wrong!",
-                                    text: "Please click OK",
-                                    confirmButtonText:'<a href="/remotepoker" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
-                                });
-                                break;
-                        }
-                        mobileWaitingTurn();
-                    },
-                    });
-                    return jqXHRWT
-                }
-
-                function mobileWaitingBetData(jqXHRWBD, player, nowPlayer){
-                    console.log("mobileWaitingBetData")
-                    jqXHRWBD = $.ajax({
-                    url: '/ajax/waitingpokerdata',
-                    dataType: 'json',
-                    success: function(data) {
-                        console.log(data)
-                        nowPlayer = data["decisionMaker"]
-                        $('#decisionMaker').text(nowPlayer)
-                        $('#betSize').text(data["betSize"]);
-                        $('#originalRaiser').text(data["originalRaiser"]);
-                        if (player === nowPlayer) {
-                            text = data["originalRaiser"] + " bet " + data["betSize"] + " dollars"
-                            popup("info", "Your Turn", text)
-                        } else {
-                            text = nowPlayer + " is playing"
-                            temppopup("info", "Info", text, "center", 1)
-                        }
-                        mobileWaitingBetData(jqXHRWBD, player, nowPlayer)
-                    },
-                    });
-                    return jqXHRWBD;
-                }
-            </script>
-        <!-- {{end}} -->
-        <!-- {{block "poker" .}} -->
-            <script>
-                function frop(cards){
-                    $.each(cards, function(index, card){
-                        //カードを裏の画像から表の画像に切り替える
-                        $("#CommunityCard" + String(index)).attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-                    })
-                };
-                function turn(card){
-                    //カードを裏の画像から表の画像に切り替える
-                    $("#CommunityCard3").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-                };
-                function river(card){
-                    //カードを裏の画像から表の画像に切り替える
-                    $("#CommunityCard4").attr('src', "/static/cardsIMG/" + card.Num + "_of_" + card.Suit + ".png");
-                };
-                function navResult(url){
-                    // Pop Up
-                    Swal.fire({
-                        icon:"info",
-                        title:"Result",
-                        text: "Show Down",
-                        confirmButtonText:'<a href=' + url + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Result page</a>'
-                    });
-                };
-                function waitingPhase(jqXHR) {
-                    console.log("mobileWaitingPhase")
-                    jqXHR = $.ajax({
-                    url: '/ajax/waitingphase',
-                    dataType: 'json',
-                    success: function(data) {
-                        console.log(data)
-                        switch (data["function"]){
-                            case "frop":
-                                popup("info", "Info", "Frop Phase")
-                                frop(data["cards"]);
-                                break;
-                            case "turn":
-                                popup("info", "Info", "Turn Phase")
-                                turn(data["card"]);
-                                break;
-                            case "river":
-                                popup("info", "Info", "River Phase")
-                                river(data["card"]);
-                                break
-                            case "result":
-                                navResult(data["URL"]);
-                                break;
-                        }
-                        waitingPhase(jqXHR)
-                    },
-                    });
-                    return jqXHR
-                };
-            </script>
-
-        <!-- {{end}} -->
         {{block "js" .}}
 
         {{end}}

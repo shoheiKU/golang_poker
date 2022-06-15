@@ -13,20 +13,20 @@
         {{with $repo.communityCards}}
             {{range $i, $v := .}}
                 {{if eq $v.Num 0}}
-                    <img src="/static/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}" width=200>
+                    <img src="/static/images/cardsIMG/backside.jpg" id="CommunityCard{{- $i -}}">
                 {{else}}
-                    <img src="/static/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}" width=200>
+                    <img src="/static/images/cardsIMG/{{- $v.Num -}}_of_{{- $v.Suit -}}.png" id="CommunityCard{{- $i -}}">
                 {{end}}
             {{end}}
         {{end}}
         <h2>Pocket Cards</h2>
         {{with $playerdata.pocketCards}}
             {{if eq .card1.Num 0}}
-                <img src="/static/cardsIMG/backside.jpg" id="Card1" width=200>
-                <img src="/static/cardsIMG/backside.jpg" id="Card2" width=200>
+                <img src="/static/images/cardsIMG/backside.jpg" id="Card1">
+                <img src="/static/images/cardsIMG/backside.jpg" id="Card2">
             {{else}}
-                <img src="/static/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1" width=200>
-                <img src="/static/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2" width=200>
+                <img src="/static/images/cardsIMG/{{- .card1.Num -}}_of_{{- .card1.Suit -}}.png" id="Card1">
+                <img src="/static/images/cardsIMG/{{- .card2.Num -}}_of_{{- .card2.Suit -}}.png" id="Card2">
             {{end}}
         {{end}}
     </div>
@@ -34,25 +34,22 @@
         <a href="/remotepoker/start" class="btn btn-primary">Start Game</a>
         <a href="/remotepoker/reset" class="btn btn-primary">Reset Game</a>
         <a href="/remotepoker/next" class="btn btn-primary">Next Game</a>
-        <button type="button" class="btn btn-primary" onclick="frop()">Frop</button>
-        <button type="button" class="btn btn-primary" onclick="turn()">Turn</button>
-        <button type="button" class="btn btn-primary" onclick="river()">River</button>
     </div>
     <div class="bettingbuttons">
         {{if $playerdata.isPlaying}}
-        <form method="post" name="betform">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <div class="form-inline-block">
-                <button type="submit" formaction="/remotepoker/action/check" class="btn btn-primary" onclick="stopAjax()">Check</button>
-                <label class="control-label">Bet Size: 
-                    <input type="text" class="form-control" style="display: inline; width: auto; vertical-align: middle;" name="Bet">
-                </label>
-                <button type="submit" formaction="/remotepoker/action/bet" class="btn btn-primary" onclick="stopAjax()">Bet</button>
-                <button type="submit" formaction="/remotepoker/action/call" class="btn btn-primary" onclick="stopAjax()">Call</button>
-                <button type="submit" formaction="/remotepoker/action/fold" class="btn btn-primary" onclick="stopAjax()">Fold</button>
-                <button type="submit" formaction="/remotepoker/action/all-in" class="btn btn-primary" onclick="stopAjax()">All in</button>
-            </div>
-        </form>
+            <form method="post" name="betform">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-inline-block">
+                    <button type="submit" formaction="/remotepoker/action/check" class="btn btn-primary" onclick="stopAjax()">Check</button>
+                    <label class="control-label">Bet Size: 
+                        <input type="text" class="form-control" style="display: inline; width: auto; vertical-align: middle;" name="Bet">
+                        <button type="submit" formaction="/remotepoker/action/bet" class="btn btn-primary" onclick="stopAjax()">Bet</button>
+                    </label>
+                    <button type="submit" formaction="/remotepoker/action/call" class="btn btn-primary" onclick="stopAjax()">Call</button>
+                    <button type="submit" formaction="/remotepoker/action/fold" class="btn btn-primary" onclick="stopAjax()">Fold</button>
+                    <button type="submit" formaction="/remotepoker/action/all-in" class="btn btn-primary" onclick="stopAjax()">All in</button>
+                </div>
+            </form>
         {{else}}
             <p>Please wait for the next game!</p>
         {{end}}
@@ -117,14 +114,19 @@
     {{$repo := .Data.repo}}
     let player = {{$p}}
     let nowPlayer = {{$repo.decisionMaker}}
+    let phase = {{$repo.phase}}
     let jqXHRWBD  // a jqXHR for mobileWaitingBetData
-    let jqXHRWT   // a jqXHR for waitingTurn
-    {{if ne $p "Preset Player"}}
+    let jqXHRWP   // a jqXHR for remoteWaitingPhase
+    bettingbuttonsDisable()
+
+    if (player !== "Preset Player") {
         console.log("Waiting Ajax");
         jqXHRWBD = mobileWaitingBetData(jqXHRWBD, player, nowPlayer);
-        jqXHRWT = waitingTurn(jqXHRWT, jqXHRWBD);
-    {{end}}
-    {{if eq $repo.phase "Show Down"}}
+        jqXHRWP = remoteWaitingPhase(jqXHRWP, jqXHRWBD);
+    }
+
+    if (phase === "Show Down") {
+        notie.alert({ type: 'info', text: {{$repo.phase}}, stay: true})
         // Pop Up
         Swal.fire({
             icon:"info",
@@ -132,77 +134,21 @@
             text: "Show Down",
             confirmButtonText:'<a href="/remotepoker/result" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
         });
-    {{else if ne .Data.player.pocketCards.card1.Num 0}}
+    } else if ($("#Card1").attr('src') !== "/static/images/cardsIMG/backside.jpg") {
         notie.alert({ type: 'info', text: {{$repo.phase}}, stay: true})
+        // Pocket cards are already served.
         if (player === nowPlayer) {
+            // This player's turn
+            bettingbuttonsEnable()
             text = {{$repo.originalRaiser}} + " bet " + {{$repo.bet}} + " dollars"
             popup("info", "Your Turn", text)
         } else {
+            // The other player's turn
             text = nowPlayer + " is playing"
             temppopup("info", "Info", text, "center", 1)
         }
-    {{end}}
-        function waitingTurn(jqXHRWT, jqXHRWBD){
-            jqXHRWT = $.ajax({
-            url: '/ajax/waitingturn',
-            data: {from: "remotepoker"},
-            dataType: 'json',
-            success: async function(data) {
-                console.log("waitingTurn")
-                $('#playerBetSize').text(data["bet"])
-                $('#playerStack').text(data["stack"])
-                switch (data["func"]) {
-                    case "prefrop":
-                        // Prefrop
-                        notie.alert({ type: 'info', text: data["text"], stay: true})
-                        break;
-                    case "frop":
-                        // Frop
-                        notie.alert({ type: 'info', text: data["text"], stay: true})
-                        frop(data["cards"]);
-                        break;
-                    case "turn":
-                        // Turn
-                        notie.alert({ type: 'info', text: data["text"], stay: true})
-                        turn(data["card"]);
-                        break;
-                    case "river":
-                        // River
-                        notie.alert({ type: 'info', text: data["text"], stay: true})
-                        river(data["card"]);
-                        break;
-                    case "result":
-                        // Result
-                        notie.alert({ type: 'info', text: data["text"], stay: true})
-                        // Pop Up
-                        Swal.fire({
-                            icon:"info",
-                            title:"Info",
-                            text: "Show Down",
-                            confirmButtonText:'<a href=' + data["URL"] + ' style="text-decoration:none; color:white; font-size:large; font-weight: bold;">Show Down</a>'
-                        });
-                        break;
-                    case "reset":
-                        // Reset
-                        console.log(jqXHRWBD)
-                        stopAjax(jqXHRWBD, jqXHRWT)
-                        document.location.href = data["redirect"];
-                        break;
-                    case "popup":
-                        // Pop Up
-                        Swal.fire({
-                            icon:"error",
-                            title:"Something went wrong!",
-                            text: "Please click OK",
-                            confirmButtonText:'<a href="/remotepoker" style="text-decoration:none; color:white; font-size:large; font-weight: bold;">OK</a>'
-                        });
-                        break;
-                }
-                waitingTurn(jqXHRWT, jqXHRWBD);
-            },
-            });
-            return jqXHRWT
-        }
+    }
+
     </script>
 {{end}}
 

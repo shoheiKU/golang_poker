@@ -43,6 +43,16 @@ func (m *Repository) About(w http.ResponseWriter, r *http.Request) {
 	render.RenderTemplate(w, r, "about.page.tmpl", &models.TemplateData{})
 }
 
+func (m *Repository) Control(w http.ResponseWriter, r *http.Request) {
+	render.RenderTemplate(w, r, "control.page.tmpl", &models.TemplateData{})
+}
+
+// PokerRepoResetPost resets PokerRepo.
+func (m *Repository) PokerRepoResetPost(w http.ResponseWriter, r *http.Request) {
+	m.PokerRepo = NewPokerRepo()
+	http.Redirect(w, r, "/control", http.StatusFound)
+}
+
 // Contact is the handler for the contact page.
 func (m *Repository) Contact(w http.ResponseWriter, r *http.Request) {
 	render.RenderTemplate(w, r, "contact.page.tmpl", &models.TemplateData{})
