@@ -1,6 +1,6 @@
 # Golang Poker
 PokerをGo言語を使って実装しました。現在開発途中です。
-テストプレイ用(http://3.125.87.5:8081/ EC2上においています。)
+テストプレイ用([http://15.152.231.230:8080/]EC2上においています。)
 Git Hubから落としてきてdocker-composeすれば8081番ポートで動きます。  
 ```console
 git clone https://github.com/shoheiKU/golang_poker.git
