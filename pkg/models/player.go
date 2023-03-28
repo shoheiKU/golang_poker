@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -58,87 +59,37 @@ func NewPlayer(
 
 // ItoPlayerSeat converts int to type PlayerSeat.
 func ItoPlayerSeat(i int) PlayerSeat {
-	switch i {
-	case 0:
-		return Player1
-	case 1:
-		return Player2
-	case 2:
-		return Player3
-	case 3:
-		return Player4
-	case 4:
-		return Player5
-	case 5:
-		return Player6
-	case 6:
-		return Player7
-	case 7:
-		return Player8
-	case 8:
-		return Player9
-	case 9:
-		return MaxPlayer
-	case 10:
-		return PresetPlayer
-	default:
-		log.Println("This number is incorrect.")
+	if i < int(MaxPlayer) {
+		return PlayerSeat(i)
+	} else {
+		log.Panic("This number is incorrect.")
 		return MaxPlayer
 	}
 }
 
 // AtoPlayerSeat converts string to type PlayerSeat.
 func AtoPlayerSeat(s string) PlayerSeat {
-	switch s {
-	case "Player1":
-		return Player1
-	case "Player2":
-		return Player2
-	case "Player3":
-		return Player3
-	case "Player4":
-		return Player4
-	case "Player5":
-		return Player5
-	case "Player6":
-		return Player6
-	case "Player7":
-		return Player7
-	case "Player8":
-		return Player8
-	case "Player9":
-		return Player9
-	default:
-		log.Println("This number is incorrect.")
+	var ret int
+	fmt.Sscanf(s, "Player%d", &ret)
+	ret--
+	if ret < int(MaxPlayer) {
+		return PlayerSeat(ret)
+	} else {
+		log.Panic("This number is incorrect.")
 		return MaxPlayer
 	}
 }
 
 // Tostring returns string according to PlayerSeat.
 func (p PlayerSeat) ToString() string {
-	switch p {
-	case Player1:
-		return "Player1"
-	case Player2:
-		return "Player2"
-	case Player3:
-		return "Player3"
-	case Player4:
-		return "Player4"
-	case Player5:
-		return "Player5"
-	case Player6:
-		return "Player6"
-	case Player7:
-		return "Player7"
-	case Player8:
-		return "Player8"
-	case Player9:
-		return "Player9"
-	case PresetPlayer:
+	if int(p) < int(MaxPlayer) {
+		return fmt.Sprintf("Player%d", int(p)+1)
+	} else if p == MaxPlayer {
+		return "Max Player"
+	} else if p == PresetPlayer {
 		return "Preset Player"
-	default:
-		log.Println("This number is incorrect.")
+	} else {
+		log.Panic("This number is incorrect.")
 		return ""
 	}
 }
