@@ -11,7 +11,7 @@ import (
 var (
 	Deck       DeckArray
 	numOfCards = 52
-	Suits      = [...]string{"hearts", "diamonds", "clubs", "spades"}
+	Suits      = [...]string{"clubs", "diamonds", "hearts", "spades"}
 )
 
 const (
@@ -86,6 +86,13 @@ func (c Cards) Less(i, j int) bool {
 	if cj == 1 {
 		cj += 13
 	}
+
+	// return the Suits order if the numbers are the same
+	if ci == cj {
+		return c[i].Suit < c[j].Suit
+	}
+
+	// return the numbers order
 	return ci < cj
 }
 func (c Cards) Swap(i, j int) {
@@ -197,6 +204,9 @@ func checkStraight(cards Cards) (hand *Hand, ok bool) {
 // ok is true when the hand is something. If ok is false, something wrong happened.
 func checkPairs(mapIntCards map[int]Cards) (hand *Hand, ok bool) {
 	s := toSortedStruct(mapIntCards)
+	for _, ss := range s {
+		sort.Sort(ss.Cards)
+	}
 	switch s[0].Size {
 	case 4:
 		// FourOfAKind
