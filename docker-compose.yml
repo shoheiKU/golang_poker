@@ -19,3 +19,5 @@ services:
          volumes:
              # mount NGINX config file
              - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+             # mount ssl certification and private key
+             - /etc/letsencrypt:/etc/letsencrypt
