@@ -19,3 +19,6 @@ services:
          volumes:
              # mount NGINX config file
              - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+             # mount Let't Encrypt certification and private key
+             # - /etc/letsencrypt/live/takechi-apps/cert.pem:/etc/letsencrypt/live/takechi-apps/cert.pem
+             # - /etc/letsencrypt/live/takechi-apps/privkey.pem:/etc/letsencrypt/live/takechi-apps/privkey.pem
