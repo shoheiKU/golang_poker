@@ -584,22 +584,22 @@ func (m *Repository) generalBetFunc(td *models.TemplateData, player *models.Play
 		// error message
 		td.Error = msg
 	}
+	td.Data = make(map[string]interface{})
+	td.Data["player"] = player.PlayerTemplateData()
+	td.Data["repo"] = m.PokerRepo.repoTemplateData()
 }
 
 // check
-func (m *Repository) checkFunc(r *http.Request) *models.TemplateData {
-	player := m.getPlayerFromSession(r)
+func (m *Repository) checkFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	player.Check()
 	td := &models.TemplateData{}
 	td.Success = "You checked.\n"
 	m.postActionFunc(td, player)
-	m.setPlayerInSession(r, player)
 	return td
 }
 
 // call
-func (m *Repository) callFunc(r *http.Request) *models.TemplateData {
-	player := m.getPlayerFromSession(r)
+func (m *Repository) callFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	err := player.SetBet(m.PokerRepo.Bet)
 	td := &models.TemplateData{}
 	if err != nil {
@@ -608,13 +608,11 @@ func (m *Repository) callFunc(r *http.Request) *models.TemplateData {
 		return td
 	}
 	m.generalBetFunc(td, player)
-	m.setPlayerInSession(r, player)
 	return td
 }
 
 // bet
-func (m *Repository) betFunc(r *http.Request) *models.TemplateData {
-	player := m.getPlayerFromSession(r)
+func (m *Repository) betFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	bet, _ := strconv.Atoi(r.FormValue("Bet"))
 	err := player.SetBet(bet)
 	td := &models.TemplateData{}
@@ -624,30 +622,28 @@ func (m *Repository) betFunc(r *http.Request) *models.TemplateData {
 		return td
 	}
 	m.generalBetFunc(td, player)
-	m.setPlayerInSession(r, player)
 	return td
 }
 
 // allin
-func (m *Repository) allInFunc(r *http.Request) *models.TemplateData {
-	player := m.getPlayerFromSession(r)
+func (m *Repository) allInFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	m.PokerRepo.IsAllIn = true
 	player.AllIn()
 	td := &models.TemplateData{}
 	m.generalBetFunc(td, player)
-	m.setPlayerInSession(r, player)
 	return td
 }
 
 // fold
-func (m *Repository) foldFunc(r *http.Request) *models.TemplateData {
-	player := m.getPlayerFromSession(r)
+func (m *Repository) foldFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	player.Fold()
 	m.PokerRepo.numOfActivePlayer--
 	td := &models.TemplateData{}
 	td.Success = "You folded.\n"
+	td.Data = make(map[string]interface{})
+	td.Data["player"] = player.PlayerTemplateData()
+	td.Data["repo"] = m.PokerRepo.repoTemplateData()
 	m.postActionFunc(td, player)
-	m.setPlayerInSession(r, player)
 	return td
 }
 
@@ -706,17 +702,6 @@ func (m *Repository) nextFunc(r *http.Request) {
 }
 
 //----------------------------------------- Get Handlers-----------------------------------------//
-// MobilePoker is the handler for the mobile poker page.
-func (m *Repository) MobilePoker(w http.ResponseWriter, r *http.Request) {
-	player := m.getPlayerFromSession(r)
-	if player == nil {
-		player = models.NewPlayer(models.PresetPlayer, 0, 0, false, &[2]models.Card{})
-	}
-	data := map[string]interface{}{}
-	data["player"] = player.PlayerTemplateData()
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", &models.TemplateData{Data: data})
-}
 
 //.
 //└── data
@@ -728,55 +713,6 @@ func (m *Repository) MobilePoker(w http.ResponseWriter, r *http.Request) {
 //    │   └── []player.PlayerTemplateData
 //    └── showdown
 //        └── []player.PlayerTemplateData
-// MobilePokerResult is the handler for the mobile result page.
-func (m *Repository) MobilePokerResult(w http.ResponseWriter, r *http.Request) {
-	player := m.getPlayerFromSession(r)
-	data := m.resultFunc(r)
-	data["player"] = player.PlayerTemplateData()
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	log.Println(data)
-	render.RenderTemplate(w, r, "mobile_poker_result.page.tmpl", &models.TemplateData{Data: data})
-}
-
-// Porker is the handler for the porker page.
-func (m *Repository) Poker(w http.ResponseWriter, r *http.Request) {
-	data := map[string]interface{}{}
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{Data: data})
-}
-
-// PokerStartGame is the handler to start a new game.
-func (m *Repository) PokerStartGame(w http.ResponseWriter, r *http.Request) {
-	m.startFunc(r)
-	data := map[string]interface{}{}
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{Info: "Prefrop Phase", Data: data})
-}
-
-// PokerResetGame is the handler to reset the existing game.
-func (m *Repository) PokerResetGame(w http.ResponseWriter, r *http.Request) {
-	m.resetFunc(r)
-	data := map[string]interface{}{}
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{Data: data})
-}
-
-// PokerNextGame is the handler to proceed to next game.
-func (m *Repository) PokerNextGame(w http.ResponseWriter, r *http.Request) {
-	m.nextFunc(r)
-	data := map[string]interface{}{}
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "poker.page.tmpl", &models.TemplateData{Data: data})
-}
-
-// PokerResult is the handler for the result page.
-func (m *Repository) PokerResult(w http.ResponseWriter, r *http.Request) {
-	player := m.getPlayerFromSession(r)
-	data := m.resultFunc(r)
-	data["player"] = player.PlayerTemplateData()
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker_result.page.tmpl", &models.TemplateData{Data: data})
-}
 
 // RemotePoker is the handler for the remote poker page.
 func (m *Repository) RemotePoker(w http.ResponseWriter, r *http.Request) {
@@ -828,70 +764,10 @@ func (m *Repository) RemotePokerResult(w http.ResponseWriter, r *http.Request) {
 }
 
 //----------------------------------------- Post Handlers-----------------------------------------//
-// MobilePokerInitPost is the handler to initialize the mobile porker page
-func (m *Repository) MobilePokerInitPost(w http.ResponseWriter, r *http.Request) {
-	player := m.initFunc(r)
-	data := map[string]interface{}{}
-	data["player"] = player.PlayerTemplateData()
-	data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl",
-		&models.TemplateData{Data: player.PlayerTemplateData()})
-}
-
-// MobilePokerCallPost is the handler for Call.
-func (m *Repository) MobilePokerCallPost(w http.ResponseWriter, r *http.Request) {
-	td := m.callFunc(r)
-	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", td)
-}
-
-// MobilePokerBetPost is the handler for All in.
-func (m *Repository) MobilePokerAllInPost(w http.ResponseWriter, r *http.Request) {
-	td := m.allInFunc(r)
-	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", td)
-}
-
-// MobilePokerBetPost is the handler for Bet.
-func (m *Repository) MobilePokerBetPost(w http.ResponseWriter, r *http.Request) {
-	td := m.betFunc(r)
-	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", td)
-}
-
-// MobilePokerFoldPost is the handler for Fold.
-func (m *Repository) MobilePokerFoldPost(w http.ResponseWriter, r *http.Request) {
-	td := m.foldFunc(r)
-	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", td)
-}
-
-// MobilePokerCheckPost is the handler for Check.
-func (m *Repository) MobilePokerCheckPost(w http.ResponseWriter, r *http.Request) {
-	td := m.checkFunc(r)
-	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	render.RenderTemplate(w, r, "mobile_poker.page.tmpl", td)
-}
-
-// RemotePokerInitPost is the handler to initialize the mobile porker page
+// RemotePokerInitPost is the handler to initialize the remote porker page
 func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request) {
 	player := m.initFunc(r)
-	data := map[string]interface{}{}
+	data := make(map[string]interface{})
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl",
@@ -900,48 +776,40 @@ func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request)
 
 // RemotePokerCallPost is the handler for Call.
 func (m *Repository) RemotePokerCallPost(w http.ResponseWriter, r *http.Request) {
-	td := m.callFunc(r)
 	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
+	td := m.callFunc(r, player)
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
 
 // RemotePokerAllInPost is the handler for All in.
 func (m *Repository) RemotePokerAllInPost(w http.ResponseWriter, r *http.Request) {
-	td := m.allInFunc(r)
 	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
+	td := m.allInFunc(r, player)
+	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
 
 // RemotePokerBetPost is the handler for Bet.
 func (m *Repository) RemotePokerBetPost(w http.ResponseWriter, r *http.Request) {
-	td := m.betFunc(r)
 	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
+	td := m.betFunc(r, player)
+	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
 
 // RemotePokerFoldPost is the handler for Fold.
 func (m *Repository) RemotePokerFoldPost(w http.ResponseWriter, r *http.Request) {
-	td := m.foldFunc(r)
 	player := m.getPlayerFromSession(r)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
+	td := m.foldFunc(r, player)
+	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
 
 // RemotePokerCheckPost is the handler for Check.
 func (m *Repository) RemotePokerCheckPost(w http.ResponseWriter, r *http.Request) {
-	td := m.checkFunc(r)
 	player := m.getPlayerFromSession(r)
+	td := m.checkFunc(r, player)
+	m.setPlayerInSession(r, player)
 	td.Data = map[string]interface{}{}
 	td.Data["player"] = player.PlayerTemplateData()
 	td.Data["repo"] = m.PokerRepo.repoTemplateData()
