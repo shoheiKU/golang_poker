@@ -510,8 +510,13 @@ func (m *Repository) playerPhaseChange(present models.PlayerSeat, phase int) {
 
 // init
 func (m *Repository) initFunc(r *http.Request) *models.Player {
+	playerSeat := models.AtoPlayerSeat(r.FormValue("PlayerSeat"))
+	if m.PokerRepo.PlayersList[playerSeat] != nil {
+		return nil
+	}
+
 	player := models.NewPlayer(
-		models.AtoPlayerSeat(r.FormValue("PlayerSeat")),
+		playerSeat,
 		models.InitialStack,
 		0,
 		true,
@@ -770,6 +775,16 @@ func (m *Repository) RemotePokerResult(w http.ResponseWriter, r *http.Request) {
 // RemotePokerInitPost is the handler to initialize the remote porker page
 func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request) {
 	player := m.initFunc(r)
+	if player == nil {
+		player = models.NewPlayer(models.PresetPlayer, 0, 0, false, &[2]models.Card{})
+		playerSeat := r.FormValue("PlayerSeat")
+		td := &models.TemplateData{
+			NotieError: playerSeat + " is already used.",
+			Data:       map[string]interface{}{"player": player.PlayerTemplateData(), "repo": m.PokerRepo.repoTemplateData()},
+		}
+		render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
+		return
+	}
 	data := make(map[string]interface{})
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
