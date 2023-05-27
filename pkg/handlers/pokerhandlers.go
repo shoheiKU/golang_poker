@@ -594,7 +594,10 @@ func (m *Repository) checkFunc(r *http.Request, player *models.Player) *models.T
 	player.Check()
 	td := &models.TemplateData{}
 	td.Success = "You checked.\n"
+	td.Data = make(map[string]interface{})
 	m.postActionFunc(td, player)
+	td.Data["player"] = player.PlayerTemplateData()
+	td.Data["repo"] = m.PokerRepo.repoTemplateData()
 	return td
 }
 
@@ -778,6 +781,7 @@ func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request)
 func (m *Repository) RemotePokerCallPost(w http.ResponseWriter, r *http.Request) {
 	player := m.getPlayerFromSession(r)
 	td := m.callFunc(r, player)
+	m.setPlayerInSession(r, player)
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
 
@@ -810,8 +814,5 @@ func (m *Repository) RemotePokerCheckPost(w http.ResponseWriter, r *http.Request
 	player := m.getPlayerFromSession(r)
 	td := m.checkFunc(r, player)
 	m.setPlayerInSession(r, player)
-	td.Data = map[string]interface{}{}
-	td.Data["player"] = player.PlayerTemplateData()
-	td.Data["repo"] = m.PokerRepo.repoTemplateData()
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 }
