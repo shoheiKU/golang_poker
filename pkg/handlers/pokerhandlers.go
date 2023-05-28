@@ -23,6 +23,8 @@ var PhaseString = [5]string{
 type PokerRepository struct {
 	PlayersCh         [models.MaxPlayer]chan int
 	PlayersList       [models.MaxPlayer]*models.Player
+	ActivePlayersList []*models.Player
+	AllInPlayersList  []*models.Player
 	Winners           []*models.Player
 	ButtonPlayer      models.PlayerSeat
 	DecisionMaker     models.PlayerSeat
@@ -30,57 +32,58 @@ type PokerRepository struct {
 	Phase             int
 	PhaseCh           chan int
 	CommunityCards    [5]models.Card
-	numOfActivePlayer int
-	IsAllIn           bool
 	SB                int
 	BB                int
 	SidePots          []models.SidePot
 	Pot               int
 	Bet               int
 	OriginalRaiser    models.PlayerSeat
+	IsPlaying         bool
 }
 
 // NewPokerRepo make a PokerRepository
 func NewPokerRepo() *PokerRepository {
 	return &PokerRepository{
-		PlayersCh:         [models.MaxPlayer]chan int{},
-		PlayersList:       [models.MaxPlayer]*models.Player{},
-		Winners:           []*models.Player{},
-		ButtonPlayer:      models.PresetPlayer,
-		DecisionMaker:     models.PresetPlayer,
-		DecisionMakerCh:   [models.MaxPlayer]chan models.PlayerSeat{},
-		Phase:             0,
-		PhaseCh:           make(chan int),
-		CommunityCards:    [5]models.Card{},
-		numOfActivePlayer: 0,
-		IsAllIn:           false,
-		SB:                50,
-		BB:                100,
-		SidePots:          []models.SidePot{},
-		Pot:               0,
-		Bet:               0,
-		OriginalRaiser:    models.PresetPlayer,
+		PlayersCh:       [models.MaxPlayer]chan int{},
+		PlayersList:     [models.MaxPlayer]*models.Player{},
+		Winners:         []*models.Player{},
+		ButtonPlayer:    models.PresetPlayer,
+		DecisionMaker:   models.PresetPlayer,
+		DecisionMakerCh: [models.MaxPlayer]chan models.PlayerSeat{},
+		Phase:           0,
+		PhaseCh:         make(chan int),
+		CommunityCards:  [5]models.Card{},
+		SB:              50,
+		BB:              100,
+		SidePots:        []models.SidePot{},
+		Pot:             0,
+		Bet:             0,
+		OriginalRaiser:  models.PresetPlayer,
+		IsPlaying:       false,
 	}
 }
 
 func (r *PokerRepository) repoTemplateData() map[string]interface{} {
-	data := map[string]interface{}{}
+	data := make(map[string]interface{})
 	data["playersList"] = r.PlayersList                // [models.MaxPlayer]*models.Player{},
 	data["winners"] = r.Winners                        // []*models.Player
 	data["buttonPlayer"] = r.ButtonPlayer.ToString()   // string
 	data["decisionMaker"] = r.DecisionMaker.ToString() // string
 	data["phase"] = PhaseString[r.Phase]               // string
 	data["communityCards"] = r.CommunityCards          // [5]models.Card
-	data["NumOfActivePlayer"] = r.numOfActivePlayer    // int
 	data["sb"] = r.SB                                  // int
 	data["bb"] = r.BB                                  // int
 	data["pot"] = r.Pot                                // int
 	data["bet"] = r.Bet                                // int
 	data["sidepots"] = r.SidePots                      // []SidePot
 	if r.OriginalRaiser == models.PresetPlayer {
+		log.Println(r.OriginalRaiser)
+		log.Println(r.ButtonPlayer)
 		bbplayer := r.nextPlayer(r.nextPlayer(r.ButtonPlayer))
+		log.Println(bbplayer)
 		data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString() // string
 	} else {
+		log.Println(r.OriginalRaiser)
 		data["originalRaiser"] = r.OriginalRaiser.ToString() // string
 	}
 	return data
@@ -89,14 +92,11 @@ func (r *PokerRepository) repoTemplateData() map[string]interface{} {
 // reset resets a PokerRepository
 func (r *PokerRepository) reset(nextButtonPlayer models.PlayerSeat) {
 	r.Winners = []*models.Player{}
-	r.numOfActivePlayer = 0
-	r.IsAllIn = false
 	r.ButtonPlayer = nextButtonPlayer
 	for _, p := range r.PlayersList {
 		if p == nil {
 			continue
 		}
-		r.numOfActivePlayer++
 		p.Reset()
 	}
 	r.Phase = 0
@@ -115,8 +115,6 @@ func (r *PokerRepository) reset(nextButtonPlayer models.PlayerSeat) {
 // init initializes a PokerRepository
 func (r *PokerRepository) init() {
 	r.Winners = []*models.Player{}
-	r.numOfActivePlayer = 0
-	r.IsAllIn = false
 	r.ButtonPlayer = models.PresetPlayer
 	// set button player and initialize all players
 	for _, p := range r.PlayersList {
@@ -126,7 +124,6 @@ func (r *PokerRepository) init() {
 		if r.ButtonPlayer == models.PresetPlayer {
 			r.ButtonPlayer = p.PlayerSeat()
 		}
-		r.numOfActivePlayer++
 		p.Init()
 	}
 	r.Phase = 0
@@ -140,6 +137,7 @@ func (r *PokerRepository) init() {
 		utg = r.nextPlayer(utg)
 	}
 	r.DecisionMaker = utg
+	r.IsPlaying = false
 }
 
 //----------------------------------------- Functions -----------------------------------------//
@@ -162,52 +160,50 @@ func (m *Repository) getPlayerFromSession(r *http.Request) *models.Player {
 
 // deal is a function for dealing.
 func (m *Repository) deal() {
-	if m.PokerRepo.IsAllIn {
-		m.PokerRepo.IsAllIn = false
-		allinplayers := []*models.Player{}
-		// set all-in players
-		for _, p := range m.PokerRepo.PlayersList {
-			if p == nil {
-				continue
-			}
-			if p.IsAllIn() {
-				allinplayers = append(allinplayers, p)
-			}
-		}
-		sort.Slice(allinplayers, func(i, j int) bool {
-			return allinplayers[i].Bet() < allinplayers[j].Bet()
+	if len(m.PokerRepo.AllInPlayersList) > 0 {
+		sort.Slice(m.PokerRepo.AllInPlayersList, func(i, j int) bool {
+			return m.PokerRepo.AllInPlayersList[i].Bet() < m.PokerRepo.AllInPlayersList[j].Bet()
 		})
 		// make SidePot
-		for _, allinp := range allinplayers {
-			bet := allinp.Bet()
+		for _, allinp := range m.PokerRepo.AllInPlayersList {
+			allInBet := allinp.Bet()
+			sidePot := models.SidePot{}
+			if allInBet == 0 {
+				continue
+			}
 			for _, p := range m.PokerRepo.PlayersList {
 				if p == nil {
 					continue
 				}
-				if bet < p.Bet() {
-					m.PokerRepo.Pot += bet
-					p.SetBet(p.Bet() - bet)
-				} else {
+				if p.Bet() < allInBet {
 					m.PokerRepo.Pot += p.Deal()
+				} else {
+					bet := p.Bet()
+					p.SetBet(allInBet)
+					m.PokerRepo.Pot += p.Deal()
+					p.SetBet(bet - allInBet)
+					sidePot.Players = append(sidePot.Players, p)
 				}
 			}
-			m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, models.SidePot{
-				Pot:    m.PokerRepo.Pot,
-				Player: allinp,
-			})
+			// set side pot
+			sidePot.Pot = m.PokerRepo.Pot
+			m.PokerRepo.Pot = 0
+			m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, sidePot)
 		}
-	}
-	for _, p := range m.PokerRepo.PlayersList {
-		if p == nil {
-			continue
-		} else {
-			m.PokerRepo.Pot += p.Deal()
+	} else {
+		for _, p := range m.PokerRepo.PlayersList {
+			if p == nil {
+				continue
+			} else {
+				m.PokerRepo.Pot += p.Deal()
+			}
 		}
 	}
 }
 
 // isDeal returns whether or not all plaayers bet same amount of chips as a bool.
-func (m *Repository) isDeal(nextplayer models.PlayerSeat) bool {
+func (m *Repository) isDeal() bool {
+	nextplayer := m.PokerRepo.nextPlayer(m.PokerRepo.DecisionMaker)
 	log.Println("Original Raiser:", m.PokerRepo.OriginalRaiser.ToString())
 	log.Println("Next Player:", nextplayer.ToString())
 	if m.PokerRepo.OriginalRaiser == nextplayer {
@@ -322,8 +318,7 @@ func (m *Repository) river() {
 
 // nextPlayer returns a next player.
 func (r *PokerRepository) nextPlayer(s models.PlayerSeat) models.PlayerSeat {
-	// If the number of active players is 0, return Preset Player.
-	if r.numOfActivePlayer == 0 {
+	if !r.IsPlaying {
 		return models.PresetPlayer
 	}
 	next := s.NextSeat()
@@ -338,42 +333,19 @@ func (r *PokerRepository) nextPlayer(s models.PlayerSeat) models.PlayerSeat {
 
 // setWinPot sets winpot for winners.
 func (m *Repository) setWinPot() {
-	set := make(map[*models.Player]struct{})
-	players := []*models.Player{}
-	for _, p := range m.PokerRepo.PlayersList {
-		if p == nil || !p.IsPlaying() || p.IsAllIn() {
-			// all-in players are compared later
-			continue
-		}
-		players = append(players, p)
-	}
-	m.PokerRepo.Winners = m.playHand(players)
-	for i := 0; i < len(m.PokerRepo.SidePots)+1; i++ {
-		for _, p := range m.PokerRepo.Winners {
-			set[p] = struct{}{}
-		}
-		num := len(m.PokerRepo.Winners)
-		pot := m.PokerRepo.Pot / num
-		remainder := m.PokerRepo.Pot % num
-		for _, player := range m.PokerRepo.Winners {
-			if player == m.PokerRepo.Winners[0] {
+	m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, models.SidePot{Pot: m.PokerRepo.Pot, Players: m.PokerRepo.ActivePlayersList})
+	for i := len(m.PokerRepo.SidePots) - 1; i >= 0; i-- {
+		winners := m.playHand(m.PokerRepo.SidePots[i].Players)
+		pot := m.PokerRepo.SidePots[i].Pot / len(winners)
+		remainder := m.PokerRepo.SidePots[i].Pot % len(winners)
+		for _, player := range winners {
+			if player == winners[0] {
 				player.AddWinPot(pot + remainder)
 			} else {
 				player.AddWinPot(pot)
 			}
 		}
-		if i < len(m.PokerRepo.SidePots) {
-			m.PokerRepo.Winners = m.playHand(append(m.PokerRepo.Winners, m.PokerRepo.SidePots[i].Player))
-			m.PokerRepo.Pot = m.PokerRepo.SidePots[i].Pot
-		}
-	}
-	m.setWinners(set)
-}
-
-func (m *Repository) setWinners(set map[*models.Player]struct{}) {
-	m.PokerRepo.Winners = []*models.Player{}
-	for key := range set {
-		m.PokerRepo.Winners = append(m.PokerRepo.Winners, key)
+		m.PokerRepo.Winners = append(m.PokerRepo.Winners, winners...)
 	}
 }
 
@@ -525,7 +497,6 @@ func (m *Repository) initFunc(r *http.Request) *models.Player {
 	m.PokerRepo.PlayersCh[player.PlayerSeat()] = make(chan int)
 	m.PokerRepo.PlayersList[player.PlayerSeat()] = player
 	m.PokerRepo.DecisionMakerCh[player.PlayerSeat()] = make(chan models.PlayerSeat)
-	m.PokerRepo.numOfActivePlayer++
 	m.setPlayerInSession(r, player)
 	return player
 }
@@ -551,15 +522,14 @@ func (m *Repository) resultFunc(r *http.Request) map[string]interface{} {
 }
 
 func (m *Repository) postActionFunc(td *models.TemplateData, player *models.Player) {
-	next := m.PokerRepo.nextPlayer(player.PlayerSeat())
-	if m.isDeal(next) {
+	if m.isDeal() {
 		m.deal()
-		if m.PokerRepo.numOfActivePlayer >= 2 {
+		if len(m.PokerRepo.ActivePlayersList) >= 2 {
 			log.Println("a---------------------")
 			// Next Phase
 			m.nextPhase(player.PlayerSeat())
-		} else if m.PokerRepo.numOfActivePlayer == 1 {
-			if m.PokerRepo.IsAllIn {
+		} else {
+			if len(m.PokerRepo.AllInPlayersList)+len(m.PokerRepo.ActivePlayersList) >= 2 {
 				log.Println("b---------------------")
 				// there are one or more all-in players
 				m.finalizeGame(player.PlayerSeat())
@@ -576,7 +546,7 @@ func (m *Repository) postActionFunc(td *models.TemplateData, player *models.Play
 			m.playerChange(player.PlayerSeat(), m.PokerRepo.nextPlayer(m.PokerRepo.ButtonPlayer))
 		}
 	} else {
-		m.playerChange(player.PlayerSeat(), next)
+		m.playerChange(player.PlayerSeat(), m.PokerRepo.nextPlayer(player.PlayerSeat()))
 	}
 }
 
@@ -635,7 +605,6 @@ func (m *Repository) betFunc(r *http.Request, player *models.Player) *models.Tem
 
 // allin
 func (m *Repository) allInFunc(r *http.Request, player *models.Player) *models.TemplateData {
-	m.PokerRepo.IsAllIn = true
 	player.AllIn()
 	td := &models.TemplateData{}
 	m.generalBetFunc(td, player)
@@ -645,7 +614,6 @@ func (m *Repository) allInFunc(r *http.Request, player *models.Player) *models.T
 // fold
 func (m *Repository) foldFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	player.Fold()
-	m.PokerRepo.numOfActivePlayer--
 	td := &models.TemplateData{}
 	td.Success = "You folded.\n"
 	td.Data = make(map[string]interface{})
@@ -658,6 +626,7 @@ func (m *Repository) foldFunc(r *http.Request, player *models.Player) *models.Te
 // start
 func (m *Repository) startFunc(r *http.Request) {
 	models.Deck.Reset()
+	m.PokerRepo.IsPlaying = true
 	for _, player := range m.PokerRepo.PlayersList {
 		if player == nil {
 			continue
@@ -735,6 +704,7 @@ func (m *Repository) RemotePoker(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{}
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
+	log.Print(data["repo"])
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", &models.TemplateData{Data: data})
 }
 
@@ -785,6 +755,7 @@ func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request)
 		render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 		return
 	}
+	m.PokerRepo.ActivePlayersList = append(m.PokerRepo.ActivePlayersList, player)
 	data := make(map[string]interface{})
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
