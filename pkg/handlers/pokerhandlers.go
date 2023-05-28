@@ -77,13 +77,9 @@ func (r *PokerRepository) repoTemplateData() map[string]interface{} {
 	data["bet"] = r.Bet                                // int
 	data["sidepots"] = r.SidePots                      // []SidePot
 	if r.OriginalRaiser == models.PresetPlayer {
-		log.Println(r.OriginalRaiser)
-		log.Println(r.ButtonPlayer)
 		bbplayer := r.nextPlayer(r.nextPlayer(r.ButtonPlayer))
-		log.Println(bbplayer)
 		data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString() // string
 	} else {
-		log.Println(r.OriginalRaiser)
 		data["originalRaiser"] = r.OriginalRaiser.ToString() // string
 	}
 	return data
@@ -110,6 +106,7 @@ func (r *PokerRepository) reset(nextButtonPlayer models.PlayerSeat) {
 		utg = r.nextPlayer(utg)
 	}
 	r.DecisionMaker = utg
+	r.SidePots = []models.SidePot{}
 }
 
 // init initializes a PokerRepository
@@ -300,20 +297,17 @@ func (m *Repository) endGame(present models.PlayerSeat) {
 func (m *Repository) frop() {
 	for i := 0; i < 3; i++ {
 		m.PokerRepo.CommunityCards[i] = models.Deck.DrawACard()
-		log.Println(m.PokerRepo.CommunityCards[i])
 	}
 }
 
 // Turn is the handler for Turn.
 func (m *Repository) turn() {
 	m.PokerRepo.CommunityCards[3] = models.Deck.DrawACard()
-	log.Println(m.PokerRepo.CommunityCards[3])
 }
 
 // River is the handler for River.
 func (m *Repository) river() {
 	m.PokerRepo.CommunityCards[4] = models.Deck.DrawACard()
-	log.Println(m.PokerRepo.CommunityCards[4])
 }
 
 // nextPlayer returns a next player.
@@ -517,7 +511,6 @@ func (m *Repository) resultFunc(r *http.Request) map[string]interface{} {
 		showdown = append(showdown, p.PlayerTemplateData())
 	}
 	data["showdown"] = showdown
-	log.Println(data)
 	return data
 }
 
@@ -693,18 +686,13 @@ func (m *Repository) nextFunc(r *http.Request) {
 
 // RemotePoker is the handler for the remote poker page.
 func (m *Repository) RemotePoker(w http.ResponseWriter, r *http.Request) {
-	if m.PokerRepo.PlayersList[0] != nil {
-		log.Println(m.PokerRepo.PlayersList[0].Bet())
-	}
 	player := m.getPlayerFromSession(r)
 	if player == nil {
 		player = models.NewPlayer(models.PresetPlayer, 0, 0, false, &[2]models.Card{})
 	}
-	log.Println(player.PlayerTemplateData())
 	data := map[string]interface{}{}
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
-	log.Print(data["repo"])
 	render.RenderTemplate(w, r, "remote_poker.page.tmpl", &models.TemplateData{Data: data})
 }
 
@@ -737,7 +725,6 @@ func (m *Repository) RemotePokerResult(w http.ResponseWriter, r *http.Request) {
 	data := m.resultFunc(r)
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
-	log.Println(data)
 	render.RenderTemplate(w, r, "remote_poker_result.page.tmpl", &models.TemplateData{Data: data})
 }
 
