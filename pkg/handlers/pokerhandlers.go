@@ -39,6 +39,7 @@ type PokerRepository struct {
 	Bet               int
 	OriginalRaiser    models.PlayerSeat
 	IsPlaying         bool
+	IsAllIn           bool
 }
 
 // NewPokerRepo make a PokerRepository
@@ -60,6 +61,7 @@ func NewPokerRepo() *PokerRepository {
 		Bet:             0,
 		OriginalRaiser:  models.PresetPlayer,
 		IsPlaying:       false,
+		IsAllIn:         false,
 	}
 }
 
@@ -76,7 +78,7 @@ func (r *PokerRepository) repoTemplateData() map[string]interface{} {
 	data["pot"] = r.Pot                                // int
 	data["bet"] = r.Bet                                // int
 	data["sidepots"] = r.SidePots                      // []SidePot
-	if r.OriginalRaiser == models.PresetPlayer {
+	if r.Phase == 0 && r.Bet == r.BB {
 		bbplayer := r.nextPlayer(r.nextPlayer(r.ButtonPlayer))
 		data["originalRaiser"] = "(Big Blind) " + bbplayer.ToString() // string
 	} else {
@@ -89,11 +91,13 @@ func (r *PokerRepository) repoTemplateData() map[string]interface{} {
 func (r *PokerRepository) reset(nextButtonPlayer models.PlayerSeat) {
 	r.Winners = []*models.Player{}
 	r.ButtonPlayer = nextButtonPlayer
+	r.ActivePlayersList = []*models.Player{}
 	for _, p := range r.PlayersList {
 		if p == nil {
 			continue
 		}
 		p.Reset()
+		r.ActivePlayersList = append(r.ActivePlayersList, p)
 	}
 	r.Phase = 0
 	r.CommunityCards = [5]models.Card{}
@@ -107,6 +111,7 @@ func (r *PokerRepository) reset(nextButtonPlayer models.PlayerSeat) {
 	}
 	r.DecisionMaker = utg
 	r.SidePots = []models.SidePot{}
+	r.IsAllIn = false
 }
 
 // init initializes a PokerRepository
@@ -135,6 +140,7 @@ func (r *PokerRepository) init() {
 	}
 	r.DecisionMaker = utg
 	r.IsPlaying = false
+	r.IsAllIn = false
 }
 
 //----------------------------------------- Functions -----------------------------------------//
@@ -157,7 +163,7 @@ func (m *Repository) getPlayerFromSession(r *http.Request) *models.Player {
 
 // deal is a function for dealing.
 func (m *Repository) deal() {
-	if len(m.PokerRepo.AllInPlayersList) > 0 {
+	if m.PokerRepo.IsAllIn {
 		sort.Slice(m.PokerRepo.AllInPlayersList, func(i, j int) bool {
 			return m.PokerRepo.AllInPlayersList[i].Bet() < m.PokerRepo.AllInPlayersList[j].Bet()
 		})
@@ -187,6 +193,7 @@ func (m *Repository) deal() {
 			m.PokerRepo.Pot = 0
 			m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, sidePot)
 		}
+		m.PokerRepo.IsAllIn = false
 	} else {
 		for _, p := range m.PokerRepo.PlayersList {
 			if p == nil {
@@ -201,9 +208,9 @@ func (m *Repository) deal() {
 // isDeal returns whether or not all plaayers bet same amount of chips as a bool.
 func (m *Repository) isDeal() bool {
 	nextplayer := m.PokerRepo.nextPlayer(m.PokerRepo.DecisionMaker)
-	log.Println("Original Raiser:", m.PokerRepo.OriginalRaiser.ToString())
-	log.Println("Next Player:", nextplayer.ToString())
-	if m.PokerRepo.OriginalRaiser == nextplayer {
+	if m.PokerRepo.Phase == 0 && m.PokerRepo.Bet == m.PokerRepo.BB && len(m.PokerRepo.ActivePlayersList) > 1 {
+		return false
+	} else if m.PokerRepo.OriginalRaiser == nextplayer {
 		log.Println("isDeal is True")
 		return true
 	} else {
@@ -244,9 +251,7 @@ func (m *Repository) nextPhase(present models.PlayerSeat) {
 func (m *Repository) finalizeGame(present models.PlayerSeat) {
 	log.Println("finalizeGame")
 	m.PokerRepo.Phase = (m.PokerRepo.Phase + 1) % 5
-	phase := m.PokerRepo.Phase
-	m.PokerRepo.Phase = 4
-	switch phase {
+	switch m.PokerRepo.Phase {
 	case 1:
 		m.frop()
 		fallthrough
@@ -260,12 +265,14 @@ func (m *Repository) finalizeGame(present models.PlayerSeat) {
 		m.setWinPot()
 	}
 	log.Println("send data-----------------------------------------------------------")
+	resultPhase := 4
+	m.PokerRepo.Phase = resultPhase
 	go func() {
-		m.PokerRepo.PhaseCh <- phase
+		m.PokerRepo.PhaseCh <- resultPhase
 	}()
 	log.Println("Phase :", m.PokerRepo.Phase)
 	// send phase data to each cliant
-	m.playerPhaseChange(present, phase)
+	m.playerPhaseChange(present, m.PokerRepo.Phase)
 }
 
 // finalizeGame proceeds the phase to result phase.
@@ -273,17 +280,7 @@ func (m *Repository) finalizeGame(present models.PlayerSeat) {
 func (m *Repository) endGame(present models.PlayerSeat) {
 	log.Println("endGame")
 	m.PokerRepo.Phase = 4
-	m.PokerRepo.Winners = []*models.Player{}
-	for _, p := range m.PokerRepo.PlayersList {
-		if p == nil || !p.IsPlaying() {
-			continue
-		}
-		m.PokerRepo.Winners = append(m.PokerRepo.Winners, p)
-	}
-	if len(m.PokerRepo.Winners) != 1 {
-		log.Panicln("func endGame error: There are more than two active players")
-	}
-	m.PokerRepo.Winners[0].AddWinPot(m.PokerRepo.Pot)
+	m.setWinPot()
 	log.Println("send data-----------------------------------------------------------")
 	go func() {
 		m.PokerRepo.PhaseCh <- m.PokerRepo.Phase
@@ -327,7 +324,9 @@ func (r *PokerRepository) nextPlayer(s models.PlayerSeat) models.PlayerSeat {
 
 // setWinPot sets winpot for winners.
 func (m *Repository) setWinPot() {
-	m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, models.SidePot{Pot: m.PokerRepo.Pot, Players: m.PokerRepo.ActivePlayersList})
+	if len(m.PokerRepo.ActivePlayersList) > 0 {
+		m.PokerRepo.SidePots = append(m.PokerRepo.SidePots, models.SidePot{Pot: m.PokerRepo.Pot, Players: m.PokerRepo.ActivePlayersList})
+	}
 	for i := len(m.PokerRepo.SidePots) - 1; i >= 0; i-- {
 		winners := m.playHand(m.PokerRepo.SidePots[i].Players)
 		pot := m.PokerRepo.SidePots[i].Pot / len(winners)
@@ -345,6 +344,9 @@ func (m *Repository) setWinPot() {
 
 // playHand returns a slice of pointers to models.Player who won the game.
 func (m *Repository) playHand(players []*models.Player) []*models.Player {
+	if len(players) == 1 {
+		return players
+	}
 	var winners []*models.Player
 	var winner *models.Player
 	for _, player := range players {
@@ -413,25 +415,24 @@ func (m *Repository) compareHands(p1, p2 *models.Player) *models.Player {
 // isBettable handles bet and returns msg and bool.
 func (m *Repository) isBettable(player *models.Player) (msg string, ok bool) {
 	ok = true
-	if m.PokerRepo.Bet > player.Bet() {
-		// Bet less than the originalraiser's bet
-		msg += fmt.Sprintf("You have to bet at least %d dollars.\n", m.PokerRepo.Bet)
-		ok = false
-	} else if player.Bet() == player.Stack() {
+	if player.Bet() == player.Stack() {
 		// All in
-		msg += fmt.Sprintf("You all in %d dollars.\n", player.Bet())
+		msg = fmt.Sprintf("You all in %d dollars.\n", player.Bet())
 		if m.PokerRepo.Bet < player.Bet() || m.PokerRepo.OriginalRaiser == models.PresetPlayer {
 			m.PokerRepo.Bet = player.Bet()
 			m.PokerRepo.OriginalRaiser = player.PlayerSeat()
 		}
-
-	} else {
+	} else if m.PokerRepo.Bet <= player.Bet() {
 		// Bet
 		msg = fmt.Sprintf("You bet %d dollars\n", player.Bet())
 		if m.PokerRepo.Bet < player.Bet() || m.PokerRepo.OriginalRaiser == models.PresetPlayer {
 			m.PokerRepo.Bet = player.Bet()
 			m.PokerRepo.OriginalRaiser = player.PlayerSeat()
 		}
+	} else {
+		// Bet less than the originalraiser's bet
+		msg = fmt.Sprintf("You have to bet at least %d dollars.\n", m.PokerRepo.Bet)
+		ok = false
 	}
 	return
 }
@@ -443,7 +444,7 @@ func (m *Repository) blindBet() {
 	bbp := m.PokerRepo.nextPlayer(sbp)
 	m.PokerRepo.PlayersList[sbp].SetBet(m.PokerRepo.SB)
 	m.PokerRepo.PlayersList[bbp].SetBet(m.PokerRepo.BB)
-	m.PokerRepo.OriginalRaiser = models.PresetPlayer
+	m.PokerRepo.OriginalRaiser = bbp
 	m.PokerRepo.Bet = m.PokerRepo.BB
 }
 
@@ -528,6 +529,7 @@ func (m *Repository) postActionFunc(td *models.TemplateData, player *models.Play
 				m.finalizeGame(player.PlayerSeat())
 			} else {
 				log.Println("c---------------------")
+				log.Println(m.PokerRepo.AllInPlayersList)
 				// the other players folded
 				m.endGame(player.PlayerSeat())
 			}
@@ -598,7 +600,15 @@ func (m *Repository) betFunc(r *http.Request, player *models.Player) *models.Tem
 
 // allin
 func (m *Repository) allInFunc(r *http.Request, player *models.Player) *models.TemplateData {
+	m.PokerRepo.IsAllIn = true
 	player.AllIn()
+	m.PokerRepo.AllInPlayersList = append(m.PokerRepo.AllInPlayersList, player)
+	for i := 0; i < len(m.PokerRepo.ActivePlayersList); i++ {
+		if player == m.PokerRepo.ActivePlayersList[i] {
+			m.PokerRepo.ActivePlayersList = append(m.PokerRepo.ActivePlayersList[0:i], m.PokerRepo.ActivePlayersList[i+1:]...)
+			break
+		}
+	}
 	td := &models.TemplateData{}
 	m.generalBetFunc(td, player)
 	return td
@@ -607,12 +617,18 @@ func (m *Repository) allInFunc(r *http.Request, player *models.Player) *models.T
 // fold
 func (m *Repository) foldFunc(r *http.Request, player *models.Player) *models.TemplateData {
 	player.Fold()
+	for i := 0; i < len(m.PokerRepo.ActivePlayersList); i++ {
+		if player == m.PokerRepo.ActivePlayersList[i] {
+			m.PokerRepo.ActivePlayersList = append(m.PokerRepo.ActivePlayersList[0:i], m.PokerRepo.ActivePlayersList[i+1:]...)
+			break
+		}
+	}
 	td := &models.TemplateData{}
 	td.Success = "You folded.\n"
 	td.Data = make(map[string]interface{})
+	m.postActionFunc(td, player)
 	td.Data["player"] = player.PlayerTemplateData()
 	td.Data["repo"] = m.PokerRepo.repoTemplateData()
-	m.postActionFunc(td, player)
 	return td
 }
 
@@ -742,7 +758,6 @@ func (m *Repository) RemotePokerInitPost(w http.ResponseWriter, r *http.Request)
 		render.RenderTemplate(w, r, "remote_poker.page.tmpl", td)
 		return
 	}
-	m.PokerRepo.ActivePlayersList = append(m.PokerRepo.ActivePlayersList, player)
 	data := make(map[string]interface{})
 	data["player"] = player.PlayerTemplateData()
 	data["repo"] = m.PokerRepo.repoTemplateData()
