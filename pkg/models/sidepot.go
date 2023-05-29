@@ -1,6 +1,6 @@
 package models
 
 type SidePot struct {
-	Pot    int
-	Player *Player
+	Pot     int
+	Players []*Player
 }
